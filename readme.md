@@ -4,6 +4,9 @@ WordPress background worker plugin that enable WordPress to interact with beanst
 # Why we need a worker ?
 We can run a very long task in the background, for example we need to import 100.000 row into WordPress databases. Instead of doing the 100.000 import in one job, we can separate the job into many smaller job which is safer.
 
+# WP-CLI
+Make sure you have WP CLI installed on your system
+
 ## Add job to queue
 
 1. Add new job to new worker queue using `wp_background_job` command 
