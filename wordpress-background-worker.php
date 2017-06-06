@@ -47,15 +47,13 @@ function wp_background_add_job( $job, $tube = WP_BACKGROUND_WORKER_QUEUE_NAME ) 
 	$job_data = json_encode($job);
 
 	// place our job into the queue into a tube we'll call matching  
-	$queue->useTube(WP_BACKGROUND_WORKER_QUEUE_NAME)  
-	    ->put($job_data);
+	$id = $queue->useTube(WP_BACKGROUND_WORKER_QUEUE_NAME)  
+	    ->put($job_data);	
 }
 
 // @todo
 function wp_background_get_queue() {
-	$queue = array();
-
-	return $queue;
+	// use $id to peek
 }
 
 function wp_background_worker_listen($listen) {

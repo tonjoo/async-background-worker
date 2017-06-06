@@ -13,13 +13,20 @@ Make sure you have WP CLI installed on your system
     ```
     $job = new stdClass();  
     // the function to run  
-    $job->function = 'find_matches';  
+    $job->function = 'function_to_execute_on_background';  
     // our user entered data  
     $job->user_data = $_POST;
     
     wp_background_add_job($job);
     ```
-2. Run `wp background-worker listen`
+2. Implement function 
+    ```
+    function function_to_execute_on_background() {
+        //do something usefull
+        echo "Background job executed successfully\n";
+    }
+    ```
+3. Run `wp background-worker listen`
 
 ## Production Mode
 
@@ -44,3 +51,6 @@ Make sure you have WP CLI installed on your system
 define( 'WP_BACKGROUND_WORKER_QUEUE_NAME', 'WP_QUEUE' );
 define( 'WP_BACKGROUND_WORKER_HOST', '127.0.0.1' );
 ```
+
+## Todo
+1. Create dashboard to show job progress / result
