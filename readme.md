@@ -15,13 +15,13 @@ Make sure you have WP CLI installed on your system
     // the function to run  
     $job->function = 'function_to_execute_on_background';  
     // our user entered data  
-    $job->user_data = $_POST;
+    $job->user_data = array('data'=>'some_data');
     
     wp_background_add_job($job);
     ```
 2. Implement function 
     ```
-    function function_to_execute_on_background() {
+    function function_to_execute_on_background($data) {
         //do something usefull
         echo "Background job executed successfully\n";
     }
