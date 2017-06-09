@@ -44,7 +44,7 @@ function background_worker_log_page_handler() { ?>
 		<div class="progress">
 			<?php 
 				if ( !defined('ASTRA_API_LOG') || !ASTRA_API_LOG ) {
-					$content = 'No Log to diplay please define() your file in wp-config.php';
+					$content = 'No Log to diplay please define ASTRA_API_LOG file in your wp-config.php';
 				} else {
 					$filearray = file(ASTRA_API_LOG);
 					$lastlines = array_slice($filearray, -100);
