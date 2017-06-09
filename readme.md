@@ -50,6 +50,7 @@ Make sure you have WP CLI installed on your system
 ```
 define( 'WP_BACKGROUND_WORKER_QUEUE_NAME', 'WP_QUEUE' );
 define( 'WP_BACKGROUND_WORKER_HOST', '127.0.0.1' );
+define( 'ASTRA_API_LOG','Path to your supervisord log file' );
 ```
 
 ## Todo
