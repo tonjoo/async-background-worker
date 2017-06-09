@@ -31,6 +31,40 @@ if( !defined( 'WP_BACKGROUND_WORKER_QUEUE_NAME' ) )
 if( !defined( 'WP_BACKGROUND_WORKER_HOST' ) )
 	define( 'WP_BACKGROUND_WORKER_HOST', '127.0.0.1' );
 
+add_action( "admin_menu", "background_worker_menu_page" );
+function background_worker_menu_page() {
+	add_management_page( __('Background Worker'), __('Background Worker'), 'manage_options', 'background_worker_log', 'background_worker_log_page_handler' );
+}
+
+function background_worker_log_page_handler() { ?>
+	<div id="" class="wrap">
+	
+		<h1>Background Worker Log</h1>
+		
+		<div class="progress">
+			<?php 
+				if ( !defined('ASTRA_API_LOG') || !ASTRA_API_LOG ) {
+					$content = 'No Log to diplay please define() your file in wp-config.php';
+				} else {
+					$filearray = file(ASTRA_API_LOG);
+					$lastlines = array_slice($filearray, -100);
+					$reversed = array_reverse($lastlines);
+
+					$content = '';
+					if ( $reversed ) {
+						foreach ($reversed as $key => $value) {
+							$content .= $value . "\n";
+						}
+					} else {
+						$content = 'No Error.';
+					}
+				} 
+			?>
+			<textarea class="log-text" rows="20"><?php echo $content; ?></textarea>
+		</div>
+	</div>
+	<?php 
+}
 
 if( !defined( 'WP_CLI' ) ) {
 	return;
@@ -44,7 +78,7 @@ function wp_background_add_job( $job, $tube = WP_BACKGROUND_WORKER_QUEUE_NAME ) 
 	//@todo validate job
 
 	// beanstalkd uses strings so we json_encode our job for storage  
-	$job_data = serialize($job);
+	$job_data = json_encode($job);
 
 	// place our job into the queue into a tube we'll call matching  
 	$id = $queue->useTube(WP_BACKGROUND_WORKER_QUEUE_NAME)  
@@ -66,17 +100,13 @@ function wp_background_worker_listen($listen) {
         ->reserve();
 
     // decode the json data  
-    $job_data = unserialize($job->getData());
+    $job_data = json_decode($job->getData(), false);
 
     $function = $job_data->function;  
     $data = $job_data->user_data;
 
     // run the function  
-    if (is_callable($function)) {
-    	call_user_func($function, $data);
-    } else {
-    	$function($data);
-    }
+    $function($data);
 
     // remove the job from the queue  
     $queue->delete($job);  
