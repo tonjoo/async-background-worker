@@ -44,7 +44,7 @@ function wp_background_add_job( $job, $tube = WP_BACKGROUND_WORKER_QUEUE_NAME ) 
 	//@todo validate job
 
 	// beanstalkd uses strings so we json_encode our job for storage  
-	$job_data = json_encode($job);
+	$job_data = serialize($job);
 
 	// place our job into the queue into a tube we'll call matching  
 	$id = $queue->useTube(WP_BACKGROUND_WORKER_QUEUE_NAME)  
@@ -66,13 +66,17 @@ function wp_background_worker_listen($listen) {
         ->reserve();
 
     // decode the json data  
-    $job_data = json_decode($job->getData(), false);
+    $job_data = unserialize($job->getData());
 
     $function = $job_data->function;  
     $data = $job_data->user_data;
 
     // run the function  
-    $function($data);
+    if (is_callable($function)) {
+    	call_user_func($function, $data);
+    } else {
+    	$function($data);
+    }
 
     // remove the job from the queue  
     $queue->delete($job);  
