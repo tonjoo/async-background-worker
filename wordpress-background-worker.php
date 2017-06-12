@@ -1,10 +1,10 @@
 <?php
 /*
 Plugin Name: WordPress Background Worker
-Description: Background Worker with peanstalkd
+Description: Aysinchrounous Background Worker for WordPress
 Author: todiadiyatmo
 Author URI: http://todiadiyatmo.com/
-Version: 0.6.1
+Version: 0.2
 Text Domain: wordpress-importer
 License: GPL version 2 or later - http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 */
@@ -23,18 +23,36 @@ License: GPL version 2 or later - http://www.gnu.org/licenses/old-licenses/gpl-2
  *
  *     $ wp background-worker
  */
-include 'vendor/autoload.php';
 
 if( !defined( 'WP_BACKGROUND_WORKER_QUEUE_NAME' ) )
-	define( 'WP_BACKGROUND_WORKER_QUEUE_NAME', 'WP_QUEUE' );
+	define( 'WP_BACKGROUND_WORKER_QUEUE_NAME', 'default' );
 
-if( !defined( 'WP_BACKGROUND_WORKER_HOST' ) )
-	define( 'WP_BACKGROUND_WORKER_HOST', '127.0.0.1' );
+function wp_background_worker_install_db() {
+   	global $wpdb;
+  	$db_name = $wpdb->prefix."jobs";
+ 
+	if($wpdb->get_var("show tables like '$db_name'") != $db_name) 
+	{
+		$sql = "CREATE TABLE ".$db_name." 
+				( `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, 
+				  `queue` varchar(512) COLLATE utf8_unicode_ci NOT NULL, 
+				  `payload` longtext COLLATE utf8_unicode_ci NOT NULL, 
+				  `attempts` tinyint(3) UNSIGNED NOT NULL,
+				  PRIMARY KEY(`id`) );";
+ 
+		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+		dbDelta($sql);
+	}
+ 
+}
+// run the install scripts upon plugin activation
+register_activation_hook(__FILE__,'wp_background_worker_install_db');
 
 add_action( "admin_menu", "background_worker_menu_page" );
 function background_worker_menu_page() {
 	add_management_page( __('Background Worker'), __('Background Worker'), 'manage_options', 'background_worker_log', 'background_worker_log_page_handler' );
 }
+
 
 function background_worker_log_page_handler() { ?>
 	<div id="" class="wrap">
@@ -70,50 +88,68 @@ if( !defined( 'WP_CLI' ) ) {
 	return;
 }
 
-function wp_background_add_job( $job, $tube = WP_BACKGROUND_WORKER_QUEUE_NAME ) {
+function wp_background_add_job( $job, $queue = WP_BACKGROUND_WORKER_QUEUE_NAME ) {
+	global $wpdb;
 
-	//@todo validate connection
-	$queue = new \Pheanstalk\Pheanstalk(WP_BACKGROUND_WORKER_HOST);
+	// Serialize class
+	$job_data = serialize($job);
 
-	//@todo validate job
-
-	// beanstalkd uses strings so we json_encode our job for storage  
-	$job_data = json_encode($job);
-
-	// place our job into the queue into a tube we'll call matching  
-	$id = $queue->useTube(WP_BACKGROUND_WORKER_QUEUE_NAME)  
-	    ->put($job_data);	
+	$wpdb->insert( 
+		$wpdb->prefix.'jobs', 
+			array( 
+				'queue' => $queue, 
+				'payload' => $job_data,
+				'attempts' => 0 
+			)
+		);
 }
 
-// @todo
-function wp_background_get_queue() {
-	// use $id to peek
-}
+function wp_background_worker_listen($queue = WP_BACKGROUND_WORKER_QUEUE_NAME) {
 
-function wp_background_worker_listen($listen) {
+	global $wpdb;
 
-	//@todo validate connection
-	$queue = new \Pheanstalk\Pheanstalk(WP_BACKGROUND_WORKER_HOST);
+	$job = $wpdb->get_row( "SELECT * FROM ".$wpdb->prefix."jobs WHERE attempts <= 3 and queue='$queue'" );
 
-    // grab the next job off the queue and reserve it  
-    $job = $queue->watch(WP_BACKGROUND_WORKER_QUEUE_NAME)  
-        ->reserve();
+	// No Job
+	if(!$job)
+		return;
 
-    // decode the json data  
-    $job_data = json_decode($job->getData(), false);
+    $job_data = unserialize(@$job->payload);
 
-    $function = $job_data->function;  
-    $data = $job_data->user_data;
+    if(!$job_data)
+    	return;
 
-    // run the function  
-    $function($data);
+    try{
 
-    // remove the job from the queue  
-    $queue->delete($job);  
+	    $function = $job_data->function;  
+    	$data = is_null($job_data->user_data) ? false : $job_data->user_data ;
 
-	// exit for one success queue , must be spawn by supervisord 
-	if( !$listen )
-		die();
+    	if( is_callable($function) )
+    		$function($data);
+    	else
+    		call_user_func_array($function,$data);
+
+    	//delete data
+    	$wpdb->delete( 
+			$wpdb->prefix."jobs", 
+			array( 'id' => $job->id  )
+		);
+    }
+    catch (Exception $e){
+    	
+    	$wpdb->update( 
+			$wpdb->prefix."jobs", 
+			array( 
+				'attempts' => $job->attempts+1,	
+			), 
+			array( 'id' => $job->id  )
+		);
+
+    	echo 'Caught exception: ',  $e->getMessage(), "\n";
+    }
+
+
+
 }
 
 /**
@@ -121,22 +157,31 @@ function wp_background_worker_listen($listen) {
  *
  */
 
-$background_worker_cmd = function( $args ) { 
+$background_worker_cmd = function( $args = array() ) { 
 
-	//@todo get all job
+	if( sizeof($args)!=0 )
+		list( $key ) = $args;	
 
-	$listen = true;	
-	list( $key ) = $args;	
 
-	while ($listen) {
+	if( in_array('listen', $args) )
+		$listen = true;
+	else
+		$listen = false;
 
-		if( in_array('listen', $args) )
-			$listen = true;
-		else
-			$listen = false;
+	wp_background_worker_listen();
 
-		wp_background_worker_listen($listen);
+	if( $listen  ) {
+
+    	$_ = $_SERVER['_'];  // or full path to php binary
+
+    	array_unshift($args,'background-worker');
+		usleep(500000);
+    	pcntl_exec($_, $args);
 	}
+
+	usleep(500000);
+	die();
 };
 
 WP_CLI::add_command( 'background-worker', $background_worker_cmd );
+ 
