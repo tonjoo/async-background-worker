@@ -108,7 +108,7 @@ function wp_background_worker_listen($queue = WP_BACKGROUND_WORKER_QUEUE_NAME) {
 
 	global $wpdb;
 
-	$job = $wpdb->get_row( "SELECT * FROM ".$wpdb->prefix."jobs WHERE attempts <= 2 and queue='$queue'" );
+	$job = $wpdb->get_row( "SELECT * FROM ".$wpdb->prefix."jobs WHERE attempts <= 2 AND queue='$queue' ORDER BY id ASC" );
 
 	// No Job
 	if(!$job)
