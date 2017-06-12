@@ -61,10 +61,10 @@ function background_worker_log_page_handler() { ?>
 		
 		<div class="progress">
 			<?php 
-				if ( !defined('ASTRA_API_LOG') || !ASTRA_API_LOG ) {
-					$content = 'No Log to diplay please define ASTRA_API_LOG file in your wp-config.php';
+				if ( !defined('BACKGROUND_WORKER_LOG') || !BACKGROUND_WORKER_LOG ) {
+					$content = 'No Log to diplay please define BACKGROUND_WORKER_LOG file in your wp-config.php';
 				} else {
-					$filearray = file(ASTRA_API_LOG);
+					$filearray = file(BACKGROUND_WORKER_LOG);
 					$lastlines = array_slice($filearray, -100);
 					$reversed = array_reverse($lastlines);
 

@@ -49,6 +49,7 @@ Make sure you have WP CLI installed on your system
 
 ```
 define( 'WP_BACKGROUND_WORKER_QUEUE_NAME', 'WP_QUEUE' );
+define( 'BACKGROUND_WORKER_LOG', '/path/to/supervisord/worker.log' );
 ```
 ## Changelog
 > 0.2
