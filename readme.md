@@ -30,9 +30,9 @@ Make sure you have WP CLI installed on your system
 
 ## Production Mode
 
-1. Install beanstalkd on your server
-2. Install supervisord on your server
-3. Put this config on the supervisord `/etc/supervisor/conf.d/wp_worker.conf` :
+
+1. Install supervisord on your server
+2. Put this config on the supervisord `/etc/supervisor/conf.d/wp_worker.conf` :
     ```
     [program:wp_worker]
     command=wp background-worker
@@ -42,16 +42,21 @@ Make sure you have WP CLI installed on your system
     autostart=true
     autorestart=true
     ```
-4. Run `supervisorctl reread` and `supervisorctl update`
-5. Make sure your worker running by run `supervisorctl`
+3. Run `supervisorctl reread` and `supervisorctl update`
+4. Make sure your worker running by run `supervisorctl`
 
 ## WP Config Variable
 
 ```
 define( 'WP_BACKGROUND_WORKER_QUEUE_NAME', 'WP_QUEUE' );
-define( 'WP_BACKGROUND_WORKER_HOST', '127.0.0.1' );
-define( 'ASTRA_API_LOG','Path to your supervisord log file' );
 ```
+## Changelog
+> 0.2
+- Updated with database backed queue
+
+> 0.1
+- Initial Releas
+- Based on beanstalkd
 
 ## Todo
 1. Create dashboard to show job progress / result
