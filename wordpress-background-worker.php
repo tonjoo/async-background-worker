@@ -172,11 +172,16 @@ $background_worker_cmd = function( $args = array() ) {
 
 	if( $listen  ) {
 
-    	$_ = $_SERVER['_'];  // or full path to php binary
+		// die();
+		
+    	$_ = $_SERVER['argv'][0];  // or full path to php binary
 
+    	// array_unshift($args,'wp');
     	array_unshift($args,'background-worker');
+		echo "TODI";		
+
 		usleep(500000);
-    	pcntl_exec($_, $args);
+    	pcntl_exec( $_, $args);
 	}
 
 	usleep(500000);
