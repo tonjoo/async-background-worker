@@ -172,13 +172,13 @@ $background_worker_cmd = function( $args = array() ) {
 
 	if( $listen  ) {
 
-		// die();
-		
     	$_ = $_SERVER['argv'][0];  // or full path to php binary
 
-    	// array_unshift($args,'wp');
+    
     	array_unshift($args,'background-worker');
-		echo "TODI";		
+    	
+    	if( posix_geteuid() == 0 && !in_array('--allow-root', $args) )
+	    	array_unshift($args,'--allow-root');
 
 		usleep(500000);
     	pcntl_exec( $_, $args);
