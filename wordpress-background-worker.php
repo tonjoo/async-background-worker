@@ -61,24 +61,35 @@ function background_worker_log_page_handler() { ?>
 		
 		<div class="progress">
 			<?php 
+					
 				if ( !defined('BACKGROUND_WORKER_LOG') || !BACKGROUND_WORKER_LOG ) {
 					$content = 'No Log to diplay please define BACKGROUND_WORKER_LOG file in your wp-config.php';
-				} else {
-					$filearray = file(BACKGROUND_WORKER_LOG);
-					$lastlines = array_slice($filearray, -100);
-					$reversed = array_reverse($lastlines);
+				} elseif( !function_exists('file_get_contents')) {
+					$content = 'Cannot read log file_get_contents() function did not exists.';
+				}
+				else {
+					$filearray = file_get_contents(BACKGROUND_WORKER_LOG);
+					$filearray = explode("\n",$filearray);
+
+
+					$filearray = array_slice($filearray, -100);
+
+					$filearray = array_reverse($filearray);
 
 					$content = '';
-					if ( $reversed ) {
-						foreach ($reversed as $key => $value) {
+					if ( $filearray ) {
+						foreach ($filearray as $key => $value) {
 							$content .= $value . "\n";
 						}
+					if ( $content == '')
+						$content = "Nothing to read, permission problem maybe ? ";
+					
 					} else {
-						$content = 'No Error.';
+						$content = 'No Log';
 					}
 				} 
 			?>
-			<textarea class="log-text" rows="20"><?php echo $content; ?></textarea>
+			<textarea class="log-text" rows="20" style='width:70%'><?php echo $content; ?></textarea>
 		</div>
 	</div>
 	<?php 
