@@ -170,6 +170,8 @@ function wp_background_worker_listen($queue = WP_BACKGROUND_WORKER_QUEUE_NAME) {
 
 $background_worker_cmd = function( $args = array() ) { 
 
+	global $wpdb;
+
 	if( sizeof($args)!=0 )
 		list( $key ) = $args;	
 
@@ -191,11 +193,25 @@ $background_worker_cmd = function( $args = array() ) {
     	if( posix_geteuid() == 0 && !in_array('--allow-root', $args) )
 	    	array_unshift($args,'--allow-root');
 
-		usleep(500000);
+		if ( $wpdb->use_mysqli ) {
+	    	mysqli_close( $wpdb->dbh );
+		} else {
+		    mysql_close( $wpdb->dbh );
+		}
+		unset( $wpdb->dbh );
+		
+		sleep(1);
     	pcntl_exec( $_, $args);
 	}
 
-	usleep(500000);
+	if ( $wpdb->use_mysqli ) {
+    	mysqli_close( $wpdb->dbh );
+	} else {
+	    mysql_close( $wpdb->dbh );
+	}
+	unset( $wpdb->dbh );
+	
+	sleep(1);
 	die();
 };
 
