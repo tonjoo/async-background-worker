@@ -200,7 +200,7 @@ $background_worker_cmd = function( $args = array() ) {
 		}
 		unset( $wpdb->dbh );
 		
-		sleep(1);
+		usleep(250000);
     	pcntl_exec( $_, $args);
 	}
 
@@ -210,8 +210,8 @@ $background_worker_cmd = function( $args = array() ) {
 	    mysql_close( $wpdb->dbh );
 	}
 	unset( $wpdb->dbh );
-	
-	sleep(1);
+
+	usleep(250000);
 	die();
 };
 
