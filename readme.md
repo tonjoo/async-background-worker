@@ -35,7 +35,8 @@ Make sure you have WP CLI installed on your system
 2. Put this config on the supervisord `/etc/supervisor/conf.d/wp_worker.conf` :
     ```
     [program:wp_worker]
-    command=wp background-worker listen --allow-root
+    # Add --allow-root if run as root (not recomended)
+    command=wp background-worker listen 
     directory=/path/to/wordpress
     stdout_logfile=/path/to/wordpress/logs/supervisord.log
     redirect_stderr=true
