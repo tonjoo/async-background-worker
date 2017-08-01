@@ -190,8 +190,8 @@ $background_worker_cmd = function( $args = array() ) {
     
     	array_unshift($args,'background-worker');
     	
-    	// if( posix_geteuid() == 0 && !in_array('--allow-root', $args) )
-	    	// array_unshift($args,'--allow-root');
+    	if( posix_geteuid() == 0 && !in_array('--allow-root', $args) )
+	    	array_unshift($args,'--allow-root');
 
 		if ( $wpdb->use_mysqli ) {
 	    	mysqli_close( $wpdb->dbh );
