@@ -127,19 +127,37 @@ function wp_background_worker_listen($queue = WP_BACKGROUND_WORKER_QUEUE_NAME) {
 
     $job_data = unserialize(@$job->payload);
 
-    if(!$job_data)
+    if(!$job_data) {
+
+    	echo "Delete job with no data";
+
+    	$wpdb->delete( 
+			$wpdb->prefix."jobs", 
+			array( 'id' => $job->id  )
+		);
+
     	return;
+    }
+
+
+	$wpdb->update( 
+		$wpdb->prefix."jobs", 
+		array( 
+			'attempts' => $job->attempts+1,	
+		), 
+		array( 'id' => $job->id  )
+	);
 
     try{
 
 	    $function = $job_data->function;  
     	$data = is_null($job_data->user_data) ? false : $job_data->user_data ;
 
-    	if( is_callable($function) )
+    	if( is_callable($function) ) 
     		$function($data);
-    	else
+    	else 
     		call_user_func_array($function,$data);
-
+    	
     	//delete data
     	$wpdb->delete( 
 			$wpdb->prefix."jobs", 
@@ -148,13 +166,6 @@ function wp_background_worker_listen($queue = WP_BACKGROUND_WORKER_QUEUE_NAME) {
     }
     catch (Exception $e){
     	
-    	$wpdb->update( 
-			$wpdb->prefix."jobs", 
-			array( 
-				'attempts' => $job->attempts+1,	
-			), 
-			array( 'id' => $job->id  )
-		);
 
     	echo 'Caught exception: ',  $e->getMessage(), "\n";
     }
@@ -174,20 +185,18 @@ $background_worker_cmd = function( $args = array() ) {
 
 	global $wpdb;
 
-	if( sizeof($args)!=0 )
-		list( $key ) = $args;	
 
-
-	if( in_array('listen', $args) )
+	if(  ( isset( $args[0] ) && 'listen' === $args[0] ) )
 		$listen = true;
 	else
 		$listen = false;
 		
 		
-	if( in_array('listen-daemon', $args) )
+	if(  isset( $args[0] ) && 'listen-daemon' === $args[0])
 		$listen_daemon = true;
 	else
 		$listen_daemon = false;
+
 
 	wp_background_worker_listen();
 	
