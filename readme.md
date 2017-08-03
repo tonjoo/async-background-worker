@@ -28,6 +28,21 @@ Make sure you have WP CLI installed on your system
     ```
 3. Run `wp background-worker listen`
 
+## Command
+
+###  `wp background-worker`
+
+Run WordPress Background Worker once. 
+
+###  `wp background-worker listen`
+
+Run WordPress Background Worker in loop (contiously), this is what you want for background worker. WordPress framework is restart in each loop.
+
+
+###  `wp background-worker listen-daemon`
+
+Run WordPress Background Worker in loop (contiously) without restart the WordPress framework. **NOTE** if you use this mode, any code change will not be reflected. You must restart the Wordpress Background Worker each time you change code. This save memory and speed up thing. 
+
 ## Production Mode
 
 
@@ -36,6 +51,7 @@ Make sure you have WP CLI installed on your system
     ```
     [program:wp_worker]
     # Add --allow-root if run as root (not recomended)
+    # if you have problem with `listen` you can use `listen-daemon` instead 
     command=wp background-worker listen 
     directory=/path/to/wordpress
     stdout_logfile=/path/to/wordpress/logs/supervisord.log

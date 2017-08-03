@@ -166,6 +166,8 @@ function wp_background_worker_listen($queue = WP_BACKGROUND_WORKER_QUEUE_NAME) {
 /**
  * Run background worker listener.
  *
+ * listen = Running the listener, WordPress is reboot after each job exectuion
+ * listen-daemon = Running the listener in daemon mode, WordPress is not reboot after each job execution
  */
 
 $background_worker_cmd = function( $args = array() ) { 
@@ -180,9 +182,26 @@ $background_worker_cmd = function( $args = array() ) {
 		$listen = true;
 	else
 		$listen = false;
+		
+		
+	if( in_array('listen-daemon', $args) )
+		$listen_daemon = true;
+	else
+		$listen_daemon = false;
 
 	wp_background_worker_listen();
+	
+	// listen-daemon mode
+	if( $listen_daemon ) {
+	    
+	    while( true ) {
+	        usleep(250000);
+	        wp_background_worker_listen();
+	    }
 
+	}
+
+    // listen mode
 	if( $listen  ) {
 
     	$_ = $_SERVER['argv'][0];  // or full path to php binary
@@ -192,23 +211,24 @@ $background_worker_cmd = function( $args = array() ) {
     	
     	if( posix_geteuid() == 0 && !in_array('--allow-root', $args) )
 	    	array_unshift($args,'--allow-root');
-
-		if ( $wpdb->use_mysqli ) {
-	    	mysqli_close( $wpdb->dbh );
-		} else {
-		    mysql_close( $wpdb->dbh );
-		}
-		unset( $wpdb->dbh );
+        
+        // close wpdb
+        $wpdb->close();
+	    unset( $wpdb->dbh );
 		
 		usleep(250000);
-    	pcntl_exec( $_, $args);
+		if( function_exists('pcntl_exec') )
+    		pcntl_exec( $_, $args);
+    	else if( function_exists('exec') )
+    		exec( $_, $args);
+    	else
+    		echo "Cannot run WordPress background worker on `listen` mode, please use `listen-daemon` instead";
+    		
+    	exit();
 	}
-
-	if ( $wpdb->use_mysqli ) {
-    	mysqli_close( $wpdb->dbh );
-	} else {
-	    mysql_close( $wpdb->dbh );
-	}
+    
+    // close wpdb
+    $wpdb->close();
 	unset( $wpdb->dbh );
 
 	usleep(250000);
