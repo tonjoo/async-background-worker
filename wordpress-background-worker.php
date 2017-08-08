@@ -4,7 +4,7 @@ Plugin Name: WordPress Background Worker
 Description: Aysinchrounous Background Worker for WordPress
 Author: todiadiyatmo
 Author URI: http://todiadiyatmo.com/
-Version: 0.2
+Version: 0.3
 Text Domain: wordpress-importer
 License: GPL version 2 or later - http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 */
@@ -24,12 +24,34 @@ License: GPL version 2 or later - http://www.gnu.org/licenses/old-licenses/gpl-2
  *     $ wp background-worker
  */
 
+define('BG_WORKER_DB_VERSION',6);
+define('BG_WORKER_DB_NAME','bg_jobs');
+
 if( !defined( 'WP_BACKGROUND_WORKER_QUEUE_NAME' ) )
 	define( 'WP_BACKGROUND_WORKER_QUEUE_NAME', 'default' );
 
+$installed_version = intval( get_option('BG_WORKER_DB_VERSION') );
+
+
+if( $installed_version < BG_WORKER_DB_VERSION) {
+	// drop and re create
+	if( $installed_version <= 5 ) {
+		global $wpdb;
+  		$db_name = $wpdb->prefix."jobs";
+
+		$sql = "DROP TABLE ".$db_name.";";
+		$wpdb->query($sql);
+ 
+		wp_background_worker_install_db();
+	}
+}
+
+
+update_option('BG_WORKER_DB_VERSION', BG_WORKER_DB_VERSION);
+
 function wp_background_worker_install_db() {
    	global $wpdb;
-  	$db_name = $wpdb->prefix."jobs";
+  	$db_name = $wpdb->prefix.BG_WORKER_DB_NAME;
  
 	if($wpdb->get_var("show tables like '$db_name'") != $db_name) 
 	{
@@ -106,7 +128,7 @@ function wp_background_add_job( $job, $queue = WP_BACKGROUND_WORKER_QUEUE_NAME )
 	$job_data = serialize($job);
 
 	$wpdb->insert( 
-		$wpdb->prefix.'jobs', 
+		$wpdb->prefix.BG_WORKER_DB_NAME, 
 			array( 
 				'queue' => $queue, 
 				'payload' => $job_data,
@@ -119,7 +141,7 @@ function wp_background_worker_listen($queue = WP_BACKGROUND_WORKER_QUEUE_NAME) {
 
 	global $wpdb;
 
-	$job = $wpdb->get_row( "SELECT * FROM ".$wpdb->prefix."jobs WHERE attempts <= 2 AND queue='$queue' ORDER BY id ASC" );
+	$job = $wpdb->get_row( "SELECT * FROM ".$wpdb->prefix.BG_WORKER_DB_NAME." WHERE attempts <= 2 AND queue='$queue' ORDER BY id ASC" );
 
 	// No Job
 	if(!$job)
@@ -132,7 +154,7 @@ function wp_background_worker_listen($queue = WP_BACKGROUND_WORKER_QUEUE_NAME) {
     	echo "Delete job with no data";
 
     	$wpdb->delete( 
-			$wpdb->prefix."jobs", 
+			$wpdb->prefix.BG_WORKER_DB_NAME, 
 			array( 'id' => $job->id  )
 		);
 
@@ -141,7 +163,7 @@ function wp_background_worker_listen($queue = WP_BACKGROUND_WORKER_QUEUE_NAME) {
 
 
 	$wpdb->update( 
-		$wpdb->prefix."jobs", 
+		$wpdb->prefix.BG_WORKER_DB_NAME, 
 		array( 
 			'attempts' => $job->attempts+1,	
 		), 
@@ -160,7 +182,7 @@ function wp_background_worker_listen($queue = WP_BACKGROUND_WORKER_QUEUE_NAME) {
     	
     	//delete data
     	$wpdb->delete( 
-			$wpdb->prefix."jobs", 
+			$wpdb->prefix.BG_WORKER_DB_NAME, 
 			array( 'id' => $job->id  )
 		);
     }
