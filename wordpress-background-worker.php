@@ -137,6 +137,14 @@ function wp_background_add_job( $job, $queue = WP_BACKGROUND_WORKER_QUEUE_NAME )
 		);
 }
 
+function wpbw_console_info( $message ) {
+	fputs(STDOUT, $message.\n); 	
+}
+
+function wpbw_console_error( $message ) {
+	fputs(STDERR, $message.\n); 	
+}
+
 function wp_background_worker_listen($queue = WP_BACKGROUND_WORKER_QUEUE_NAME) {
 
 	global $wpdb;
@@ -188,11 +196,13 @@ function wp_background_worker_listen($queue = WP_BACKGROUND_WORKER_QUEUE_NAME) {
     }
     catch (Exception $e){
     	
+    	wpbw_console_error( "Caught exception: ".$e->getMessage() );
 
-    	echo 'Caught exception: ',  $e->getMessage(), "\n";
     }
 
-
+    // Flush, in case output buffering is on;
+	@flush();
+    @ob_flush();
 
 }
 
@@ -255,7 +265,7 @@ $background_worker_cmd = function( $args = array() ) {
     	else
     		echo "Cannot run WordPress background worker on `listen` mode, please use `listen-daemon` instead";
     		
-    	exit();
+    	die();
 	}
     
     // close wpdb
@@ -268,3 +278,4 @@ $background_worker_cmd = function( $args = array() ) {
 
 WP_CLI::add_command( 'background-worker', $background_worker_cmd );
  
+
