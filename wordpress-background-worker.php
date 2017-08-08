@@ -89,7 +89,7 @@ function background_worker_log_page_handler() { ?>
 					}
 				} 
 			?>
-			<textarea class="log-text" rows="20" style='width:70%'><?php echo $content; ?></textarea>
+			<textarea class="log-text" rows="20" style='width:1000px'><?php echo $content; ?></textarea>
 		</div>
 	</div>
 	<?php 
