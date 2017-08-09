@@ -45,7 +45,6 @@ Run WordPress Background Worker in loop (contiously) without restart the WordPre
 
 ## Production Mode
 
-
 1. Install supervisord on your server
 2. Put this config on the supervisord `/etc/supervisor/conf.d/wp_worker.conf` :
     ```
@@ -66,10 +65,25 @@ Run WordPress Background Worker in loop (contiously) without restart the WordPre
 
 ## WP Config Variable
 
+
+### Queue and log setting
 ```
 define( 'WP_BACKGROUND_WORKER_QUEUE_NAME', 'WP_QUEUE' );
 define( 'BACKGROUND_WORKER_LOG', '/path/to/supervisord/worker.log' );
 ```
+
+### Memory Limit
+
+You might want to increase memory limit, only on CLI
+
+```
+if( php_sapi_name() === 'cli' )
+    define('WP_MAX_MEMORY_LIMIT', '1024M');
+else
+    define('WP_MAX_MEMORY_LIMIT', '512M');
+
+```
+
 ## Changelog
 > 0.3
 - Updated table name
