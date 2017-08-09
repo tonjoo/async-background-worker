@@ -138,11 +138,11 @@ function wp_background_add_job( $job, $queue = WP_BACKGROUND_WORKER_QUEUE_NAME )
 }
 
 function wpbw_console_info( $message ) {
-	fputs(STDOUT, $message.\n); 	
+	fputs(STDOUT, $message.PHP_EOL); 	
 }
 
 function wpbw_console_error( $message ) {
-	fputs(STDERR, $message.\n); 	
+	fputs(STDERR, $message.PHP_EOL); 	
 }
 
 function wp_background_worker_listen($queue = WP_BACKGROUND_WORKER_QUEUE_NAME) {
