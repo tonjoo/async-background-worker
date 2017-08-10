@@ -169,6 +169,7 @@ function wp_background_worker_execute_job($queue = WP_BACKGROUND_WORKER_QUEUE_NA
  * listen-loop = Running the listener in daemon mode, WordPress is not reboot after each job execution
  */
 $background_worker_cmd = function( $args = array() ) { 
+	
 	if(  ( isset( $args[0] ) && 'listen' === $args[0] ) )
 		$listen = true;
 	else
@@ -179,12 +180,12 @@ $background_worker_cmd = function( $args = array() ) {
 	}
 		
 	if(  isset( $args[0] ) && 'listen-loop' === $args[0])
-		$listen_daemon = true;
+		$listen_loop = true;
 	else
-		$listen_daemon = false;
+		$listen_loop = false;
 	
 	// listen-loop mode
-	if( $listen_daemon ) {
+	if( $listen_loop ) {
 	    
 	    while( true ) {
 	    	wp_background_worker_check_memory();
@@ -211,7 +212,6 @@ $background_worker_cmd = function( $args = array() ) {
 			$cmd = exec( $cmd);
 			if( $cmd !== "" )
 				echo $cmd."\n";
-			
 			@flush();
     		@ob_flush();
 		}
@@ -221,6 +221,9 @@ $background_worker_cmd = function( $args = array() ) {
 	}
 };
 function wp_background_worker_check_memory() {
+	if( WP_DEBUG )
+		$usage = memory_get_usage() / 1024 / 1024;
+		echo  "Memory Usage : ".round( $usage, 2 )."MB \n";
  	if ( ( memory_get_usage() / 1024 / 1024) >= WP_MEMORY_LIMIT ) {
         echo "Memory limit execeed";
         exit();
