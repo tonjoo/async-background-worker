@@ -39,7 +39,7 @@ Run WordPress Background Worker once.
 Run WordPress Background Worker in loop (contiously), this is what you want for background worker. WordPress framework is restart in each loop.
 
 
-###  `wp background-worker listen-daemon`
+###  `wp background-worker listen-loop`
 
 Run WordPress Background Worker in loop (contiously) without restart the WordPress framework. **NOTE** if you use this mode, any code change will not be reflected. You must restart the Wordpress Background Worker each time you change code. This save memory and speed up thing. 
 
@@ -50,7 +50,7 @@ Run WordPress Background Worker in loop (contiously) without restart the WordPre
     ```
     [program:wp_worker]
     # Add --allow-root if run as root (not recomended)
-    # if you have problem with `listen` you can use `listen-daemon` instead 
+    # if you have problem with `listen` you can use `listen-loop` instead 
     command=wp background-worker listen 
     directory=/path/to/wordpress
     stdout_logfile=/path/to/wordpress/logs/supervisord.log
@@ -88,7 +88,7 @@ else
 > 0.3
 - Updated table name
 - Force output buffer 
-- Add 'listen-daemon' mode
+- Add 'listen-loop' mode
 
 > 0.2
 - Updated with database backed queue
