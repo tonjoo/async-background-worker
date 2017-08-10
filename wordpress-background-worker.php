@@ -294,8 +294,8 @@ function wp_background_worker_debug( $msg ) {
 
 function wp_background_worker_output_buffer_check() {
 
-    // @ob_flush();
-    // @flush();
+    @ob_flush();
+    @flush();
 }
 
 
