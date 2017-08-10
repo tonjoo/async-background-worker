@@ -142,8 +142,6 @@ function wp_background_worker_execute_job($queue = WP_BACKGROUND_WORKER_QUEUE_NA
 
 	$job = $wpdb->get_row( "SELECT * FROM ".$wpdb->prefix.BG_WORKER_DB_NAME." WHERE attempts <= 2 AND queue='$queue' ORDER BY id ASC" );
 
-
-
 	// No Job
 	if(!$job) {		
 		wp_background_worker_log("No job available..");
@@ -207,6 +205,7 @@ function wp_background_worker_execute_job($queue = WP_BACKGROUND_WORKER_QUEUE_NA
  */
 
 $background_worker_cmd = function( $args = array() ) { 
+	
 
 	if(  ( isset( $args[0] ) && 'listen' === $args[0] ) )
 		$listen = true;
@@ -218,12 +217,12 @@ $background_worker_cmd = function( $args = array() ) {
 	}
 		
 	if(  isset( $args[0] ) && 'listen-loop' === $args[0])
-		$listen_daemon = true;
+		$listen_loop = true;
 	else
-		$listen_daemon = false;
+		$listen_loop = false;
 	
 	// listen-loop mode
-	if( $listen_daemon ) {
+	if( $listen_loop ) {
 	    
 	    while( true ) {
 	    	wp_background_worker_check_memory();
@@ -236,6 +235,7 @@ $background_worker_cmd = function( $args = array() ) {
 	else if ( $listen) {
 		// start daemon
 		while(true) {
+
 			wp_background_worker_check_memory();
 			$args = array();
 
@@ -256,7 +256,7 @@ $background_worker_cmd = function( $args = array() ) {
 
 			if( $cmd !== "" )
 				echo $cmd."\n";
-			
+
 			@flush();
     		@ob_flush();
 		}
@@ -269,6 +269,10 @@ $background_worker_cmd = function( $args = array() ) {
 };
 
 function wp_background_worker_check_memory() {
+
+	if( WP_DEBUG )
+		$usage = memory_get_usage() / 1024 / 1024;
+		echo  "Memory Usage : ".round( $usage, 2 )."MB \n";
 
  	if ( ( memory_get_usage() / 1024 / 1024) >= WP_MEMORY_LIMIT ) {
         echo "Memory limit execeed";
