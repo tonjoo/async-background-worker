@@ -143,8 +143,8 @@ function wp_background_worker_execute_job($queue = WP_BACKGROUND_WORKER_QUEUE_NA
 	$job = $wpdb->get_row( "SELECT * FROM ".$wpdb->prefix.BG_WORKER_DB_NAME." WHERE attempts <= 2 AND queue='$queue' ORDER BY id ASC" );
 
 	// No Job
-	if(!$job) {		
-		wp_background_worker_log("No job available..");
+	if( !$job ) {		
+		wp_background_worker_debug("No job available..");
 		return;
 	}
 
@@ -152,7 +152,7 @@ function wp_background_worker_execute_job($queue = WP_BACKGROUND_WORKER_QUEUE_NA
 
     if(!$job_data) {
 
-    	wp_background_worker_log("Delete malformated job..");
+    	wp_background_worker_debug("Delete malformated job..");
 
     	$wpdb->delete( 
 			$wpdb->prefix.BG_WORKER_DB_NAME, 
@@ -162,7 +162,7 @@ function wp_background_worker_execute_job($queue = WP_BACKGROUND_WORKER_QUEUE_NA
     	return;
     }
 
-    wp_background_worker_log("Execute job : ".$job->id);
+    wp_background_worker_debug("Working on job ID = {$job->id} ");
 
 	$wpdb->update( 
 		$wpdb->prefix.BG_WORKER_DB_NAME, 
@@ -172,8 +172,7 @@ function wp_background_worker_execute_job($queue = WP_BACKGROUND_WORKER_QUEUE_NA
 		array( 'id' => $job->id  )
 	);
 
-    try{
-
+    try{	
 	    $function = $job_data->function;  
     	$data = is_null($job_data->user_data) ? false : $job_data->user_data ;
 
@@ -181,7 +180,7 @@ function wp_background_worker_execute_job($queue = WP_BACKGROUND_WORKER_QUEUE_NA
     		$function($data);
     	else 
     		call_user_func_array($function,$data);
-    	
+
     	//delete data
     	$wpdb->delete( 
 			$wpdb->prefix.BG_WORKER_DB_NAME, 
@@ -189,12 +188,9 @@ function wp_background_worker_execute_job($queue = WP_BACKGROUND_WORKER_QUEUE_NA
 		);
     }
     catch (Exception $e){
-    	 wp_background_worker_log("Caught exception: ".$e->getMessage() );
+    	 WP_CLI::error( "Caught exception: ".$e->getMessage() );
     }
 
-    // Flush, in case output buffering is on;
-	@flush();
-    @ob_flush();
 }
 
 /**
@@ -205,15 +201,15 @@ function wp_background_worker_execute_job($queue = WP_BACKGROUND_WORKER_QUEUE_NA
  */
 
 $background_worker_cmd = function( $args = array() ) { 
-	
+
 
 	if(  ( isset( $args[0] ) && 'listen' === $args[0] ) )
 		$listen = true;
 	else
 		$listen = false;
 	
-	if( $listen && !function_exists('pcntl_fork') ) {
-		echo "Cannot run WordPress background worker on `listen` mode, please use `listen-loop` instead";
+	if( $listen && !function_exists('exec') ) {
+		wp_background_worker_debug( "Cannot run WordPress background worker on `listen` mode, please use `listen-loop` instead" );
 	}
 		
 	if(  isset( $args[0] ) && 'listen-loop' === $args[0])
@@ -236,11 +232,13 @@ $background_worker_cmd = function( $args = array() ) {
 		// start daemon
 		while(true) {
 
+			$output = array();
+
 			wp_background_worker_check_memory();
 			$args = array();
 
 			usleep(250000);
-			wp_background_worker_log("Spawn next worker");
+			wp_background_worker_debug("Spawn next worker");
 
 			$_ = $_SERVER['argv'][0];  // or full path to php binary
 		    
@@ -250,15 +248,16 @@ $background_worker_cmd = function( $args = array() ) {
 			    array_unshift($args,'--allow-root');
 
 			$args = implode(" ", $args);
-			$cmd = $_." ".$args;
+			$cmd = $_." ".$args." 2>&1";
 
-			$cmd = exec( $cmd);
+			exec( $cmd ,$output);
 
-			if( $cmd !== "" )
-				echo $cmd."\n";
+			foreach ( $output as $echo) {
+				WP_CLI::log($echo);
+			}
 
-			@flush();
-    		@ob_flush();
+			wp_background_worker_output_buffer_check();
+	
 		}
 	}
 	else {
@@ -266,32 +265,37 @@ $background_worker_cmd = function( $args = array() ) {
 		wp_background_worker_execute_job();
 	}
 
+	wp_background_worker_output_buffer_check();
+	exit();
 };
 
 function wp_background_worker_check_memory() {
 
-	if( WP_DEBUG )
+	if( WP_DEBUG ) {
 		$usage = memory_get_usage() / 1024 / 1024;
-		echo  "Memory Usage : ".round( $usage, 2 )."MB \n";
+		wp_background_worker_debug(  "Memory Usage : ".round( $usage, 2 )."MB" );		
+	}
 
  	if ( ( memory_get_usage() / 1024 / 1024) >= WP_MEMORY_LIMIT ) {
-        echo "Memory limit execeed";
+        wp_background_worker_debug( "Memory limit execeed" );
         exit();
     }
 
 }
 
-
 WP_CLI::add_command( 'background-worker', $background_worker_cmd );
  
+function wp_background_worker_debug( $msg ) {
 
-
-
-function wp_background_worker_log( $args ) {
-	if( WP_DEBUG )
-		echo $args."\n";
-
-	// Flush, in case output buffering is on;
-	@flush();
-    @ob_flush();
+	if( WP_DEBUG ) {
+		WP_CLI::log($msg);
+	}
 }
+
+function wp_background_worker_output_buffer_check() {
+
+    // @ob_flush();
+    // @flush();
+}
+
+
