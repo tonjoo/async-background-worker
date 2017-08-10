@@ -237,7 +237,7 @@ $background_worker_cmd = function( $args = array() ) {
 			wp_background_worker_check_memory();
 			$args = array();
 
-			usleep(250000);
+			// usleep(250000);
 			wp_background_worker_debug("Spawn next worker");
 
 			$_ = $_SERVER['argv'][0];  // or full path to php binary
