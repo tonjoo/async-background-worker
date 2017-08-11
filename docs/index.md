@@ -68,6 +68,7 @@ Run WordPress Background Worker in loop (contiously) without restart the WordPre
 
 ### Queue and log setting
 ```
+define( 'WP_BG_WORKER_DEBUG' , false );
 define( 'WP_BACKGROUND_WORKER_QUEUE_NAME', 'WP_QUEUE' );
 define( 'BACKGROUND_WORKER_LOG', '/path/to/supervisord/worker.log' );
 ```

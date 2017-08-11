@@ -28,6 +28,8 @@ require_once(plugin_dir_path(__FILE__) . 'admin-page.php');
 define('BG_WORKER_DB_VERSION',6);
 define('BG_WORKER_DB_NAME','bg_jobs');
 
+if( !defined('WP_BG_WORKER_DEBUG') )
+	define('WP_BG_WORKER_DEBUG',false );
 
 if( !defined( 'WP_BACKGROUND_WORKER_QUEUE_NAME' ) )
 	define( 'WP_BACKGROUND_WORKER_QUEUE_NAME', 'default' );
@@ -227,7 +229,7 @@ $background_worker_cmd = function( $args = array() ) {
 
 function wp_background_worker_check_memory() {
 
-	if( WP_DEBUG ) {
+	if( WP_BG_WORKER_DEBUG ) {
 		$usage = memory_get_usage() / 1024 / 1024;
 		wp_background_worker_debug(  "Memory Usage : ".round( $usage, 2 )."MB" );		
 	}
@@ -243,7 +245,7 @@ WP_CLI::add_command( 'background-worker', $background_worker_cmd );
  
 function wp_background_worker_debug( $msg ) {
 
-	if( WP_DEBUG ) {
+	if( WP_BG_WORKER_DEBUG ) {
 		WP_CLI::log($msg);
 	}
 }

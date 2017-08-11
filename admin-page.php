@@ -22,8 +22,6 @@ function background_worker_log_page_handler() { ?>
 
 					global $wp_filesystem;
 
-					$filename = BACKGROUND_WORKER_LOG;
-
 					if ( empty($wp_filesystem) ) {
 						require_once (ABSPATH . '/wp-admin/includes/file.php');
 						WP_Filesystem();
