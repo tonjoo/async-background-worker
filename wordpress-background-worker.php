@@ -23,9 +23,11 @@ License: GPL version 2 or later - http://www.gnu.org/licenses/old-licenses/gpl-2
  *
  *     $ wp background-worker
  */
-	
+require_once(plugin_dir_path(__FILE__) . 'admin-page.php');
+
 define('BG_WORKER_DB_VERSION',6);
 define('BG_WORKER_DB_NAME','bg_jobs');
+
 
 if( !defined( 'WP_BACKGROUND_WORKER_QUEUE_NAME' ) )
 	define( 'WP_BACKGROUND_WORKER_QUEUE_NAME', 'default' );
@@ -69,53 +71,6 @@ function wp_background_worker_install_db() {
 }
 // run the install scripts upon plugin activation
 register_activation_hook(__FILE__,'wp_background_worker_install_db');
-
-add_action( "admin_menu", "background_worker_menu_page" );
-function background_worker_menu_page() {
-	add_management_page( __('Background Worker'), __('Background Worker'), 'manage_options', 'background_worker_log', 'background_worker_log_page_handler' );
-}
-
-
-function background_worker_log_page_handler() { ?>
-	<div id="" class="wrap">
-	
-		<h1>Background Worker Log</h1>
-		
-		<div class="progress">
-			<?php 
-					
-				if ( !defined('BACKGROUND_WORKER_LOG') || !BACKGROUND_WORKER_LOG ) {
-					$content = 'No Log to diplay please define BACKGROUND_WORKER_LOG file in your wp-config.php';
-				} elseif( !function_exists('file_get_contents')) {
-					$content = 'Cannot read log file_get_contents() function did not exists.';
-				}
-				else {
-					$filearray = file_get_contents(BACKGROUND_WORKER_LOG);
-					$filearray = explode("\n",$filearray);
-
-
-					$filearray = array_slice($filearray, -100);
-
-					$filearray = array_reverse($filearray);
-
-					$content = '';
-					if ( $filearray ) {
-						foreach ($filearray as $key => $value) {
-							$content .= $value . "\n";
-						}
-					if ( $content == '')
-						$content = "Nothing to read, permission problem maybe ? ";
-					
-					} else {
-						$content = 'No Log';
-					}
-				} 
-			?>
-			<textarea class="log-text" rows="20" style='width:1000px'><?php echo $content; ?></textarea>
-		</div>
-	</div>
-	<?php 
-}
 
 if( !defined( 'WP_CLI' ) ) {
 	return;
@@ -243,8 +198,9 @@ $background_worker_cmd = function( $args = array() ) {
 			$_ = $_SERVER['argv'][0];  // or full path to php binary
 		    
 		    array_unshift($args,'background-worker');
-		    	
-		    if( posix_geteuid() == 0 && !in_array('--allow-root', $args) )
+		    
+
+		    if( function_exists('posix_geteuid') && posix_geteuid() == 0 && !in_array('--allow-root', $args) )
 			    array_unshift($args,'--allow-root');
 
 			$args = implode(" ", $args);
