@@ -28,6 +28,9 @@ require_once(plugin_dir_path(__FILE__) . 'admin-page.php');
 define('BG_WORKER_DB_VERSION',6);
 define('BG_WORKER_DB_NAME','bg_jobs');
 
+if( !defined('BG_WORKER_SLEEP') )
+	define('BG_WORKER_SLEEP', 750000 );
+
 if( !defined('WP_BG_WORKER_DEBUG') )
 	define('WP_BG_WORKER_DEBUG',false );
 
@@ -180,7 +183,7 @@ $background_worker_cmd = function( $args = array() ) {
 	    while( true ) {
 	    	wp_background_worker_check_memory();
 	        
-	        usleep(500000);
+	        usleep(BG_WORKER_SLEEP);
 	        wp_background_worker_execute_job();
 	    }
 
@@ -194,7 +197,7 @@ $background_worker_cmd = function( $args = array() ) {
 			wp_background_worker_check_memory();
 			$args = array();
 
-			usleep(500000);
+			usleep(BG_WORKER_SLEEP);
 			wp_background_worker_debug("Spawn next worker");
 
 			$_ = $_SERVER['argv'][0];  // or full path to php binary

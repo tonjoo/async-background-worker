@@ -70,6 +70,8 @@ Run WordPress Background Worker in loop (contiously) without restart the WordPre
 ```
 define( 'WP_BG_WORKER_DEBUG' , false );
 define( 'WP_BACKGROUND_WORKER_QUEUE_NAME', 'WP_QUEUE' );
+// Sleep between each background worker call, default value is 0.75 second
+define( 'BG_WORKER_SLEEP', 750000 );
 define( 'BACKGROUND_WORKER_LOG', '/path/to/supervisord/worker.log' );
 ```
 
