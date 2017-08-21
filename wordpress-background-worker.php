@@ -31,6 +31,9 @@ define('BG_WORKER_DB_NAME','bg_jobs');
 if( !defined('BG_WORKER_SLEEP') )
 	define('BG_WORKER_SLEEP', 750000 );
 
+if( !defined('BG_WORKER_TIMELIMIT') )
+	define('BG_WORKER_TIMELIMIT', 60 );
+
 if( !defined('WP_BG_WORKER_DEBUG') )
 	define('WP_BG_WORKER_DEBUG',false );
 
@@ -176,6 +179,11 @@ $background_worker_cmd = function( $args = array() ) {
 		$listen_loop = true;
 	else
 		$listen_loop = false;
+
+	if( !$listen && !$listen_loop ) {
+		if( function_exists('set_time_limit'))
+		 	set_time_limit(BG_WORKER_TIMELIMIT);
+	}
 	
 	// listen-loop mode
 	if( $listen_loop ) {
@@ -211,7 +219,7 @@ $background_worker_cmd = function( $args = array() ) {
 			$args = implode(" ", $args);
 			$cmd = $_." ".$args." 2>&1";
 
-			exec( $cmd ,$output);
+			exec( $cmd ,$output );
 
 			foreach ( $output as $echo) {
 				WP_CLI::log($echo);

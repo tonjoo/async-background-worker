@@ -73,6 +73,8 @@ define( 'WP_BACKGROUND_WORKER_QUEUE_NAME', 'WP_QUEUE' );
 // Sleep between each background worker call, default value is 0.75 second
 define( 'BG_WORKER_SLEEP', 750000 );
 define( 'BACKGROUND_WORKER_LOG', '/path/to/supervisord/worker.log' );
+// Timeout for worker execution, best to not set time to unlimited
+define( 'BG_WORKER_TIMELIMIT', 60 );
 ```
 
 ### Memory Limit
