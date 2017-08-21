@@ -51,7 +51,7 @@ if( $installed_version < BG_WORKER_DB_VERSION) {
 
 		$sql = "DROP TABLE ".$db_name.";";
 		$wpdb->query($sql);
- 
+
 		wp_background_worker_install_db();
 	}
 }
@@ -62,20 +62,20 @@ update_option('BG_WORKER_DB_VERSION', BG_WORKER_DB_VERSION);
 function wp_background_worker_install_db() {
    	global $wpdb;
   	$db_name = $wpdb->prefix.BG_WORKER_DB_NAME;
- 
-	if($wpdb->get_var("show tables like '$db_name'") != $db_name) 
+
+	if($wpdb->get_var("show tables like '$db_name'") != $db_name)
 	{
-		$sql = "CREATE TABLE ".$db_name." 
-				( `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, 
-				  `queue` varchar(512) COLLATE utf8_unicode_ci NOT NULL, 
-				  `payload` longtext COLLATE utf8_unicode_ci NOT NULL, 
+		$sql = "CREATE TABLE ".$db_name."
+				( `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+				  `queue` varchar(512) COLLATE utf8_unicode_ci NOT NULL,
+				  `payload` longtext COLLATE utf8_unicode_ci NOT NULL,
 				  `attempts` tinyint(3) UNSIGNED NOT NULL,
 				  PRIMARY KEY(`id`) );";
- 
+
 		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 		dbDelta($sql);
 	}
- 
+
 }
 // run the install scripts upon plugin activation
 register_activation_hook(__FILE__,'wp_background_worker_install_db');
@@ -90,12 +90,12 @@ function wp_background_add_job( $job, $queue = WP_BACKGROUND_WORKER_QUEUE_NAME )
 	// Serialize class
 	$job_data = serialize($job);
 
-	$wpdb->insert( 
-		$wpdb->prefix.BG_WORKER_DB_NAME, 
-			array( 
-				'queue' => $queue, 
+	$wpdb->insert(
+		$wpdb->prefix.BG_WORKER_DB_NAME,
+			array(
+				'queue' => $queue,
 				'payload' => $job_data,
-				'attempts' => 0 
+				'attempts' => 0
 			)
 		);
 }
@@ -106,7 +106,7 @@ function wp_background_worker_execute_job($queue = WP_BACKGROUND_WORKER_QUEUE_NA
 	$job = $wpdb->get_row( "SELECT * FROM ".$wpdb->prefix.BG_WORKER_DB_NAME." WHERE attempts <= 2 AND queue='$queue' ORDER BY id ASC" );
 
 	// No Job
-	if( !$job ) {		
+	if( !$job ) {
 		wp_background_worker_debug("No job available..");
 		return;
 	}
@@ -117,8 +117,8 @@ function wp_background_worker_execute_job($queue = WP_BACKGROUND_WORKER_QUEUE_NA
 
     	wp_background_worker_debug("Delete malformated job..");
 
-    	$wpdb->delete( 
-			$wpdb->prefix.BG_WORKER_DB_NAME, 
+    	$wpdb->delete(
+			$wpdb->prefix.BG_WORKER_DB_NAME,
 			array( 'id' => $job->id  )
 		);
 
@@ -127,26 +127,26 @@ function wp_background_worker_execute_job($queue = WP_BACKGROUND_WORKER_QUEUE_NA
 
     wp_background_worker_debug("Working on job ID = {$job->id} ");
 
-	$wpdb->update( 
-		$wpdb->prefix.BG_WORKER_DB_NAME, 
-		array( 
-			'attempts' => $job->attempts+1,	
-		), 
+	$wpdb->update(
+		$wpdb->prefix.BG_WORKER_DB_NAME,
+		array(
+			'attempts' => $job->attempts+1,
+		),
 		array( 'id' => $job->id  )
 	);
 
-    try{	
-	    $function = $job_data->function;  
+    try{
+	    $function = $job_data->function;
     	$data = is_null($job_data->user_data) ? false : $job_data->user_data ;
 
-    	if( is_callable($function) ) 
+    	if( is_callable($function) )
     		$function($data);
-    	else 
+    	else
     		call_user_func_array($function,$data);
 
     	//delete data
-    	$wpdb->delete( 
-			$wpdb->prefix.BG_WORKER_DB_NAME, 
+    	$wpdb->delete(
+			$wpdb->prefix.BG_WORKER_DB_NAME,
 			array( 'id' => $job->id  )
 		);
     }
@@ -163,34 +163,36 @@ function wp_background_worker_execute_job($queue = WP_BACKGROUND_WORKER_QUEUE_NA
  * listen-loop = Running the listener in daemon mode, WordPress is not reboot after each job execution
  */
 
-$background_worker_cmd = function( $args = array() ) { 
+$background_worker_cmd = function( $args = array() ) {
 
 
 	if(  ( isset( $args[0] ) && 'listen' === $args[0] ) )
 		$listen = true;
 	else
 		$listen = false;
-	
+
 	if( $listen && !function_exists('exec') ) {
 		wp_background_worker_debug( "Cannot run WordPress background worker on `listen` mode, please use `listen-loop` instead" );
 	}
-		
+
 	if(  isset( $args[0] ) && 'listen-loop' === $args[0])
 		$listen_loop = true;
 	else
 		$listen_loop = false;
 
 	if( !$listen && !$listen_loop ) {
-		if( function_exists('set_time_limit'))
+		if( function_exists( 'set_time_limit' ) )
 		 	set_time_limit(BG_WORKER_TIMELIMIT);
+		elseif( function_exists( 'ini_set' ) )
+			ini_set('max_execution_time', BG_WORKER_TIMELIMIT);
 	}
-	
+
 	// listen-loop mode
 	if( $listen_loop ) {
-	    
+
 	    while( true ) {
 	    	wp_background_worker_check_memory();
-	        
+
 	        usleep(BG_WORKER_SLEEP);
 	        wp_background_worker_execute_job();
 	    }
@@ -209,9 +211,9 @@ $background_worker_cmd = function( $args = array() ) {
 			wp_background_worker_debug("Spawn next worker");
 
 			$_ = $_SERVER['argv'][0];  // or full path to php binary
-		    
+
 		    array_unshift($args,'background-worker');
-		    
+
 
 		    if( function_exists('posix_geteuid') && posix_geteuid() == 0 && !in_array('--allow-root', $args) )
 			    array_unshift($args,'--allow-root');
@@ -226,7 +228,7 @@ $background_worker_cmd = function( $args = array() ) {
 			}
 
 			wp_background_worker_output_buffer_check();
-	
+
 		}
 	}
 	else {
@@ -242,7 +244,7 @@ function wp_background_worker_check_memory() {
 
 	if( WP_BG_WORKER_DEBUG ) {
 		$usage = memory_get_usage() / 1024 / 1024;
-		wp_background_worker_debug(  "Memory Usage : ".round( $usage, 2 )."MB" );		
+		wp_background_worker_debug(  "Memory Usage : ".round( $usage, 2 )."MB" );
 	}
 
  	if ( ( memory_get_usage() / 1024 / 1024) >= WP_MEMORY_LIMIT ) {
@@ -253,7 +255,7 @@ function wp_background_worker_check_memory() {
 }
 
 WP_CLI::add_command( 'background-worker', $background_worker_cmd );
- 
+
 function wp_background_worker_debug( $msg ) {
 
 	if( WP_BG_WORKER_DEBUG ) {
@@ -266,5 +268,3 @@ function wp_background_worker_output_buffer_check() {
     @ob_flush();
     @flush();
 }
-
-
