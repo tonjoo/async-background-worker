@@ -188,6 +188,7 @@ $background_worker_cmd = function( $args = array() ) {
 	}
 
 	// listen-loop mode
+	// @todo max execution time on listen_loop
 	if( $listen_loop ) {
 
 	    while( true ) {
@@ -248,7 +249,7 @@ function wp_background_worker_check_memory() {
 	}
 
  	if ( ( memory_get_usage() / 1024 / 1024) >= WP_MEMORY_LIMIT ) {
-        wp_background_worker_debug( "Memory limit execeed" );
+				WP_CLI::log("Memory limit execeed");
         exit();
     }
 
