@@ -18,14 +18,14 @@
 	display: block;
 }
 
-.spinner {
+#background-worker .spinner {
 	visibility: visible;
 	position: absolute;
     top: 0;
     right: 50%;
     margin-right: -10px;
 }
-.spinner::before { 
+#background-worker .spinner::before { 
 	content: '';
     background-image: url('../img/spinner.gif');
     background-size: 16px 16px;
@@ -33,7 +33,7 @@
     height: 16px;
 }
 
-.actions {
+#background-worker .actions {
 	position: relative;
 }
 
