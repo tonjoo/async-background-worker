@@ -25,6 +25,8 @@ License: GPL version 2 or later - http://www.gnu.org/licenses/old-licenses/gpl-2
  */
 require_once(plugin_dir_path(__FILE__) . 'admin-page.php');
 
+define('BG_WORKER_DIR', plugin_dir_url(__FILE__));
+
 define('BG_WORKER_DB_VERSION',6);
 define('BG_WORKER_DB_NAME','bg_jobs');
 
@@ -41,7 +43,6 @@ if( !defined( 'WP_BACKGROUND_WORKER_QUEUE_NAME' ) )
 	define( 'WP_BACKGROUND_WORKER_QUEUE_NAME', 'default' );
 
 $installed_version = intval( get_option('BG_WORKER_DB_VERSION') );
-
 
 if( $installed_version < BG_WORKER_DB_VERSION) {
 	// drop and re create
@@ -79,6 +80,12 @@ function wp_background_worker_install_db() {
 }
 // run the install scripts upon plugin activation
 register_activation_hook(__FILE__,'wp_background_worker_install_db');
+
+if ( !function_exists('bw_number_format') ) {
+	function bw_number_format($number) {
+		return number_format($number, 0, ',', '.');
+	}
+}
 
 if( !defined( 'WP_CLI' ) ) {
 	return;
