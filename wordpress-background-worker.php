@@ -25,6 +25,7 @@ License: GPL version 2 or later - http://www.gnu.org/licenses/old-licenses/gpl-2
  */
 require_once(plugin_dir_path(__FILE__) . 'admin-page.php');
 
+define('BG_WORKER_NAME', 'background_worker');
 define('BG_WORKER_DIR', plugin_dir_url(__FILE__));
 
 define('BG_WORKER_DB_VERSION',15);
@@ -90,6 +91,15 @@ function wp_background_worker_install_db() {
 }
 // run the install scripts upon plugin activation
 register_activation_hook(__FILE__,'wp_background_worker_install_db');
+
+if ( !function_exists('get_current_url') ) {
+	function get_current_url() {
+		$url = @( $_SERVER["HTTPS"] != 'on' ) ? 'http://'.$_SERVER["SERVER_NAME"] : 'https://'.$_SERVER["SERVER_NAME"];
+		$url .= $_SERVER["REQUEST_URI"];
+
+		return $url;
+	}
+}
 
 if ( !function_exists('bw_number_format') ) {
 	function bw_number_format($number) {
