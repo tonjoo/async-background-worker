@@ -3,41 +3,210 @@
 add_action( "admin_enqueue_scripts", "wp_background_worker_admin_scripts" );
 function wp_background_worker_admin_scripts() {
 	wp_enqueue_style( 'bg-worker-admin-style', BG_WORKER_DIR . 'css/admin.css', array(), false );
-	wp_enqueue_script( 'kpi-scripts-js', BG_WORKER_DIR . 'js/admin.js' , array( 'jquery' ), '', true );
+	wp_enqueue_script( 'bg-worker-admin-js', BG_WORKER_DIR . 'js/admin.js' , array( 'jquery' ), '', true );
 }
 
 add_action( "admin_menu", "background_worker_menu_page" );
 function background_worker_menu_page() {
-	add_management_page( __('Background Worker'), __('Background Worker'), 'manage_options', 'background_worker_log', 'background_worker_log_page_handler' );
+	add_management_page( __('Background Worker'), __('Background Worker'), 'manage_options', BG_WORKER_NAME, 'background_worker_page_handler' );
 }
 
-function background_worker_log_page_handler() { 
-	global $wpdb;
+function background_worker_page_handler() { 
+	global $wpdb, $pagenow;
 
-	$table_name = $wpdb->prefix . BG_WORKER_DB_NAME;
+	$table_name 	= $wpdb->prefix . BG_WORKER_DB_NAME;
 
-	$paged 		= isset($_GET['paged']) ? intval($_GET['paged']) : 1;
-	$per_page 	= 20;
-	$offset 	= ($per_page*$paged) - $per_page;
+	$page 			= isset($_GET['page']) ? $_GET['page'] : BG_WORKER_NAME;
+	$page_uri 		= add_query_arg( array( 'page' => $page ), trailingslashit( admin_url() ) . $pagenow );
+	$current_url 	= get_current_url();
+	$nonce 			= wp_create_nonce('clear_background_worker_jobs');
+	$paged 			= isset($_GET['paged']) ? intval($_GET['paged']) : 1;
+	$status 		= isset($_GET['status']) ? $_GET['status'] : '';
+	$per_page 		= 20;
+	$offset 		= ($per_page*$paged) - $per_page;
 
-	$sql = "SELECT * FROM $table_name";
-	$total_jobs = $wpdb->get_var( "SELECT COUNT(*) FROM ($sql) AS derived_table" );
-	$jobs = $wpdb->get_results( $sql . " ORDER BY ID ASC LIMIT $offset, $per_page" );
+	$sql 				= "SELECT * FROM $table_name ORDER BY id, created_datetime, attempts ASC";
+	$total_active_jobs 	= $wpdb->get_var( "SELECT COUNT(*) FROM $table_name WHERE attempts < 3" );
+	$total_failed_jobs 	= $wpdb->get_var( "SELECT COUNT(*) FROM $table_name WHERE attempts > 2" );
+	$total_jobs 		= $wpdb->get_var( "SELECT COUNT(*) FROM ($sql) AS derived_table" );
+	$max_pages 			= max(1, ceil($total_jobs/$per_page));
+	
+	if ( '' != $status ) {
+		if ( 'active' == $status ) {
+			$sql = $wpdb->prepare( 
+				"
+				SELECT * FROM $table_name 
+				WHERE 
+					attempts < %d 
+				ORDER BY id, created_datetime, attempts ASC
+				", array(3) 
+			);
 
-	$total_failed_jobs = $wpdb->get_var( "SELECT COUNT(*) FROM $table_name WHERE attempts > 2" );
+			$total_active_jobs 	= $wpdb->get_var( "SELECT COUNT(*) FROM ($sql) AS derived_table" );
+			$max_pages 			= max(1, ceil($total_active_jobs/$per_page));
+		} else {
+			$sql = $wpdb->prepare( 
+				"
+				SELECT * FROM $table_name 
+				WHERE 
+					attempts > %d 
+				ORDER BY id, created_datetime, attempts DESC
+				", array(2) 
+			);
+
+			$total_failed_jobs 	= $wpdb->get_var( "SELECT COUNT(*) FROM ($sql) AS derived_table" );
+			$max_pages 			= max(1, ceil($total_failed_jobs/$per_page));
+		}
+	} 
+
+	$jobs = $wpdb->get_results( $sql . " LIMIT $offset, $per_page" );
 
 	?>
 	<div id="background-worker" class="wrap">
 	
 		<h1>Background Worker Log</h1>
 		
+		<?php 
+			if ( isset($_GET['action']) && wp_verify_nonce($_GET['action'], 'clear_background_worker_jobs') ) { 
+				$delete = $wpdb->query("DELETE FROM $table_name WHERE 1");
+
+				if ( !is_wp_error($delete) ) { 
+					echo '<p>' . __('All job have been cleared.') . '</p>'; 
+				} else {
+					echo '<p>Error : ' . $delete->get_error_message() . '</p>'; 
+				}
+
+				echo '<a href="'.$page_uri.'">'.__('Return to plugin homepage').'</a>';
+
+				return;
+			}
+		?>
+
 		<ul class="tabs">
-			<li class="tab-link" data-tab="background-worker-log">Log</li>
 			<li class="tab-link current" data-tab="background-worker-job">Job</li>
+			<li class="tab-link" data-tab="background-worker-log">Log</li>
 		</ul>
 
+		<div id="background-worker-job" class="tab-content current">
+			<div class="tab-wrapper">
+				<div class="count">
+					<span class="pull-left">Total Jobs: <strong><?php echo bw_number_format($total_jobs); ?></strong></span>
+					<span class="pull-right">Failed Jobs: <strong><?php echo bw_number_format($total_failed_jobs); ?></strong></span>
+				</div>
+
+				<div class="navigation">
+					<div class="pull-left">
+						<ul class="subsubsub">
+							<li><a href="<?php echo $page_uri; ?>" class="<?php if ( '' == $status ) echo 'current'; ?>">Semua</a> (<?php echo bw_number_format($total_jobs); ?>) | </li>
+							<li><a href="<?php echo add_query_arg(array('status'=>'active'),$page_uri); ?>" class="<?php if ( 'active' == $status ) echo 'current'; ?>">Active Jobs</a> (<?php echo bw_number_format($total_active_jobs); ?>) | </li>
+							<li><a href="<?php echo add_query_arg(array('status'=>'failed'),$page_uri); ?>" class="<?php if ( 'failed' == $status ) echo 'current'; ?>">Failed Jobs</a> (<?php echo bw_number_format($total_failed_jobs); ?>)</li>
+						</ul>
+					</div>
+					<div class="pull-right">
+						<a href="<?php echo add_query_arg(array('action'=>$nonce),$page_uri); ?>"><?php _e('Clear All Jobs'); ?></a>
+					</div>
+				</div>
+
+				<table class="bordered-table">
+					<thead>
+						<tr>
+							<th scope="row" rowspan="2">#</th>
+							<th rowspan="2"><?php _e('ID'); ?></th>
+							<th rowspan="2"><?php _e('Created Date Time'); ?></th>
+							<th rowspan="2"><?php _e('Job'); ?></th>
+							<th rowspan="2"><?php _e('Queue'); ?></th>
+							<th rowspan="2"><?php _e('Attemps'); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php 
+							if ( $jobs ) { 
+								$number = $offset; 
+								$i=0; 
+								foreach ($jobs as $key => $job) { 
+									$i++; 
+									$number++; 
+
+									$payload = unserialize(@$job->payload);
+
+									?>
+									<tr>
+										<th scope="row"><?php echo $number; ?></th>
+										<th><?php echo $job->id; ?></th>
+										<th class="text-center"><?php echo $job->created_datetime; ?></th>
+										<td>
+											<?php 
+												$function = $payload->function;
+												if ( is_array($function) ) {
+													$obj = $function[0];
+													unset($function[0]);
+													foreach ($function as $func) {
+														echo $func;
+													}
+												} else {
+													echo $function;
+												}
+
+												/*
+												 * Params
+												 */
+												// echo "<br>";
+												// $user_data = $payload->user_data;
+												// echo "<pre>";
+												// if ( is_array($user_data) ) {
+												// 	foreach ($user_data as $key_param => $param ) {
+												// 		echo "[".$key_param."]" . " => " . $param;
+												// 		echo "<br>";
+												// 	}
+												// } else {
+												// 	echo "User data: " . $user_data;
+												// }
+												// echo "</pre>";
+											?>
+										</td>
+										<td class="text-center"><?php echo $job->queue; ?></td>
+										<td class="text-center">
+											<?php 
+												if ( 'failed' == $status ) {
+													echo '<div class="actions">';
+													echo '<a href="#" id="btn-bw-retry-job" data-job-ID="'.$job->id.'" class="button">Retry Job</a>'; 
+													echo '<span class="spinner hide"></span>';
+													echo '</div>';
+												} else {
+													echo $job->attempts; 
+												}
+											?>
+										</td>
+									</tr>
+									<?php 
+								}
+							} else { ?>
+								<tr>
+									<td colspan="6" class="text-center"><?php _e('Empty job.'); ?></td>
+								</tr>
+								<?php 
+							}
+						?>
+					</tbody>
+				</table>
+
+				<div class="pagination text-right">
+					<?php 
+						echo paginate_links( array(
+							'base' 		=> add_query_arg( 'paged', '%#%' ),
+							'format' 	=> '',
+							'prev_text' => __('&laquo;'),
+							'next_text' => __('&raquo;'),
+							'total' 	=> $max_pages,
+							'current' 	=> $paged
+						));
+					?>
+				</div>
+			</div>
+		</div>
+
 		<div id="background-worker-log" class="tab-content">
-			<div class="progress">
+			<div class="tab-wrapper">
 				<?php 
 					if ( !defined('BACKGROUND_WORKER_LOG') || !BACKGROUND_WORKER_LOG ) {
 						$content = 'No Log to diplay please define BACKGROUND_WORKER_LOG file in your wp-config.php';
@@ -75,60 +244,46 @@ function background_worker_log_page_handler() {
 						}
 					} 
 				?>
-				<textarea class="log-text" rows="20" style='width:1000px'><?php echo $content; ?></textarea>
+				<textarea class="log-text" rows="20"><?php echo $content; ?></textarea>
 			</div>
 		</div>
 
-		<div id="background-worker-job" class="tab-content current">
-			<div class="count">
-				<span class="pull-left">Total Jobs: <strong><?php echo bw_number_format($total_jobs); ?></strong></span>
-				<span class="pull-right">Failed Jobs: <strong><?php echo bw_number_format($total_failed_jobs); ?></strong></span>
-			</div>
-
-			<table class="bordered-table">
-				<thead>
-					<tr>
-						<th scope="row">#</th>
-						<th><?php _e('Job'); ?></th>
-						<th><?php _e('Queue'); ?></th>
-						<th><?php _e('Attemps'); ?></th>
-					</tr>
-				</thead>
-				<tbody>
-					<?php 
-						if ( $jobs ) { $i=0; $number = $offset; 
-							foreach ($jobs as $key => $job) { $i++; $number++; ?>
-								<tr>
-									<th scope="row"><?php echo $number; ?></th>
-									<td><?php echo unserialize(@$job->payload)->function; ?></td>
-									<td class="text-center"><?php echo $job->queue; ?></td>
-									<td class="text-center"><?php echo $job->attempts; ?></td>
-								</tr>
-								<?php 
-							}
-						} else { ?>
-							<tr>
-								<td colspan="4" class="text-center"><?php _e('Empty job.'); ?></td>
-							</tr>
-							<?php 
-						}
-					?>
-				</tbody>
-			</table>
-
-			<div class="pagination text-right">
-				<?php 
-					echo paginate_links( array(
-						'base' 		=> add_query_arg( 'paged', '%#%' ),
-						'format' 	=> '',
-						'prev_text' => __('&laquo;'),
-						'next_text' => __('&raquo;'),
-						'total' 	=> ceil($total_jobs/$per_page),
-						'current' 	=> $paged
-					));
-				?>
-			</div>
-		</div>
 	</div>
 	<?php 
+}
+
+// add_action( "admin_notices", "background_worker_admin_notices" );
+function background_worker_admin_notices() {
+	if ( !isset($_GET['page']) || BG_WORKER_NAME != $_GET['page'] ) return;
+
+	if ( isset($_GET['action']) && wp_verify_nonce($_GET['action'], 'clear_background_worker_jobs') ) { ?>
+		<div class="notice notice-success is-dismissible">
+			<p><?php _e('All job have been cleared.'); ?></p>
+		</div>
+		<?php 
+	}
+}
+
+add_action( "wp_ajax_retry_background_worker_job", "retry_background_worker_job_ajax_callback" );
+function retry_background_worker_job_ajax_callback() {
+	global $wpdb;
+	$table_name = $wpdb->prefix . BG_WORKER_DB_NAME;
+	$response 	= [];
+	$dataForm 	= $_POST['dataForm'];
+	$_POST 		= $dataForm;
+	$job_id 	= $_POST['id'];
+
+	$delete = $wpdb->delete( 
+		$table_name, 
+		array('id'=>$job_id), 
+		array('%d') 
+	);
+
+	if ( !is_wp_error($delete) ) {
+		$response['message'] = 'Active';
+	} else {
+		$response['message'] = $delete->get_error_message();
+	}
+
+	wp_send_json($response);
 }
