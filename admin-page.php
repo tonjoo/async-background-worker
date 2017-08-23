@@ -71,7 +71,7 @@ function background_worker_page_handler() {
 				$delete = $wpdb->query("DELETE FROM $table_name WHERE 1");
 
 				if ( !is_wp_error($delete) ) { 
-					echo '<p>' . __('All job have been cleared.') . '</p>'; 
+					echo '<p>' . __('All jobs have been cleared.') . '</p>'; 
 				} else {
 					echo '<p>Error : ' . $delete->get_error_message() . '</p>'; 
 				}
@@ -102,9 +102,13 @@ function background_worker_page_handler() {
 							<li><a href="<?php echo add_query_arg(array('status'=>'failed'),$page_uri); ?>" class="<?php if ( 'failed' == $status ) echo 'current'; ?>">Failed Jobs</a> (<?php echo bw_number_format($total_failed_jobs); ?>)</li>
 						</ul>
 					</div>
-					<div class="pull-right">
-						<a href="<?php echo add_query_arg(array('action'=>$nonce),$page_uri); ?>"><?php _e('Clear All Jobs'); ?></a>
-					</div>
+					
+					<?php if ( $total_jobs > 0 ) { ?>
+						<div class="pull-right">
+							<a href="<?php echo add_query_arg(array('action'=>$nonce),$page_uri); ?>" onClick="if ( !confirm('Are you sure?') ) return false;"><?php _e('Clear All Jobs'); ?></a>
+						</div>
+						<?php 
+					} ?>
 				</div>
 
 				<table class="bordered-table">
@@ -258,7 +262,7 @@ function background_worker_admin_notices() {
 
 	if ( isset($_GET['action']) && wp_verify_nonce($_GET['action'], 'clear_background_worker_jobs') ) { ?>
 		<div class="notice notice-success is-dismissible">
-			<p><?php _e('All job have been cleared.'); ?></p>
+			<p><?php _e('All jobs have been cleared.'); ?></p>
 		</div>
 		<?php 
 	}
