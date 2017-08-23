@@ -27,7 +27,7 @@ require_once(plugin_dir_path(__FILE__) . 'admin-page.php');
 
 define('BG_WORKER_DIR', plugin_dir_url(__FILE__));
 
-define('BG_WORKER_DB_VERSION',6);
+define('BG_WORKER_DB_VERSION',15);
 define('BG_WORKER_DB_NAME','bg_jobs');
 
 if( !defined('BG_WORKER_SLEEP') )
@@ -54,6 +54,16 @@ if( $installed_version < BG_WORKER_DB_VERSION) {
 		$wpdb->query($sql);
 
 		wp_background_worker_install_db();
+	}
+
+
+	// drop and re create
+	if( $installed_version <= 10 ) {
+		global $wpdb;
+	  $db_name = $wpdb->prefix.BG_WORKER_DB_NAME;
+	
+		$sql = "ALTER TABLE {$db_name} ADD `created_datetime` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `attempts`;";
+		$wpdb->query($sql);
 	}
 }
 
