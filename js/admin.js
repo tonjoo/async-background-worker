@@ -11,7 +11,7 @@ jQuery(function($){
 		});
 	});
 
-	$('#btn-bw-retry-job').click(function(e){
+	$('.btn-bw-retry-job').click(function(e){
 		e.preventDefault();
 
 		var el = $(this),

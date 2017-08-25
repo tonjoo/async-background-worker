@@ -25,8 +25,8 @@ License: GPL version 2 or later - http://www.gnu.org/licenses/old-licenses/gpl-2
  */
 require_once(plugin_dir_path(__FILE__) . 'admin-page.php');
 
-define('BG_WORKER_NAME', 'background_worker');
-define('BG_WORKER_DIR', plugin_dir_url(__FILE__));
+define('BG_WORKER_PLUGIN_DIR', plugin_dir_url(__FILE__));
+define('BG_WORKER_ADMIN_MENU_SLUG', 'background_worker');
 
 define('BG_WORKER_DB_VERSION',15);
 define('BG_WORKER_DB_NAME','bg_jobs');
@@ -91,6 +91,18 @@ function wp_background_worker_install_db() {
 }
 // run the install scripts upon plugin activation
 register_activation_hook(__FILE__,'wp_background_worker_install_db');
+
+/**
+ * Add settings button on plugin actions
+ */
+$plugin = plugin_basename( __FILE__ );
+add_filter( "plugin_action_links_$plugin", "wp_background_worker_add_settings_link" );
+function wp_background_worker_add_settings_link($links) {
+	$menu_page = BG_WORKER_ADMIN_MENU_SLUG;
+	$settings_link = '<a href="tools.php?page='.$menu_page.'">' . __( 'Settings' ) . '</a>';
+	array_unshift( $links, $settings_link );
+	return $links;
+}
 
 if ( !function_exists('get_current_url') ) {
 	function get_current_url() {
