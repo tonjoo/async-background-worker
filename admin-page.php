@@ -137,7 +137,7 @@ function background_worker_page_handler() {
 									<tr>
 										<th scope="row"><?php echo $number; ?></th>
 										<th><?php echo $job->id; ?></th>
-										<th class="text-center"><?php echo $job->created_datetime; ?></th>
+										<th class="text-center"><?php echo isset($job->created_datetime) ? $job->created_datetime : '-'; ?></th>
 										<td>
 											<?php 
 												$function = $payload->function;
@@ -271,22 +271,27 @@ function background_worker_admin_notices() {
 add_action( "wp_ajax_retry_background_worker_job", "retry_background_worker_job_ajax_callback" );
 function retry_background_worker_job_ajax_callback() {
 	global $wpdb;
+
 	$table_name = $wpdb->prefix . BG_WORKER_DB_NAME;
+	
 	$response 	= [];
+	
 	$dataForm 	= $_POST['dataForm'];
 	$_POST 		= $dataForm;
 	$job_id 	= $_POST['id'];
 
-	$delete = $wpdb->delete( 
+	$update = $wpdb->update( 
 		$table_name, 
+		array('attempts'=>0), 
 		array('id'=>$job_id), 
+		array('%d'), 
 		array('%d') 
 	);
 
-	if ( !is_wp_error($delete) ) {
+	if ( !is_wp_error($update) ) {
 		$response['message'] = 'Active';
 	} else {
-		$response['message'] = $delete->get_error_message();
+		$response['message'] = $update->get_error_message();
 	}
 
 	wp_send_json($response);

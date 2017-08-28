@@ -72,23 +72,26 @@ if( $installed_version < BG_WORKER_DB_VERSION) {
 update_option('BG_WORKER_DB_VERSION', BG_WORKER_DB_VERSION);
 
 function wp_background_worker_install_db() {
-   	global $wpdb;
-  	$db_name = $wpdb->prefix.BG_WORKER_DB_NAME;
+	global $wpdb;
 
-	if($wpdb->get_var("show tables like '$db_name'") != $db_name)
-	{
-		$sql = "CREATE TABLE ".$db_name."
-				( `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-				  `queue` varchar(512) COLLATE utf8_unicode_ci NOT NULL,
-				  `payload` longtext COLLATE utf8_unicode_ci NOT NULL,
-				  `attempts` tinyint(3) UNSIGNED NOT NULL,
-				  PRIMARY KEY(`id`) );";
+	$db_name = $wpdb->prefix.BG_WORKER_DB_NAME;
 
-		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-		dbDelta($sql);
-	}
+	// create db table
+	$charset_collate = $wpdb->get_charset_collate();
 
+	$sql = "CREATE TABLE ".$db_name." ( 
+			  id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, 
+			  created_datetime datetime NOT NULL, 
+			  queue varchar(512) COLLATE utf8_unicode_ci NOT NULL, 
+			  payload longtext COLLATE utf8_unicode_ci NOT NULL, 
+			  attempts tinyint(3) UNSIGNED NOT NULL, 
+			  PRIMARY KEY(`id`) 
+		  )$charset_collate;";
+
+	require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+	dbDelta($sql);
 }
+
 // run the install scripts upon plugin activation
 register_activation_hook(__FILE__,'wp_background_worker_install_db');
 

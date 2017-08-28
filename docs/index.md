@@ -83,9 +83,9 @@ You might want to increase memory limit, only on CLI
 
 ```
 if( php_sapi_name() === 'cli' )
-    define('WP_MEMORY_LIMIT', '1024M');
+    define('WP_MAX_MEMORY_LIMIT', '1024M');
 else
-    define('WP_MEMORY_LIMIT', '512M');
+    define('WP_MAX_MEMORY_LIMIT', '512M');
 
 ```
 
