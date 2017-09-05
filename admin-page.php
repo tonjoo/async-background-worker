@@ -2,13 +2,13 @@
 
 add_action( "admin_enqueue_scripts", "wp_background_worker_admin_scripts" );
 function wp_background_worker_admin_scripts() {
-	wp_enqueue_style( 'bg-worker-admin-style', BG_WORKER_DIR . 'css/admin.css', array(), false );
-	wp_enqueue_script( 'bg-worker-admin-js', BG_WORKER_DIR . 'js/admin.js' , array( 'jquery' ), '', true );
+	wp_enqueue_style( 'bg-worker-admin-style', BG_WORKER_PLUGIN_DIR . 'css/admin.css', array(), false );
+	wp_enqueue_script( 'bg-worker-admin-js', BG_WORKER_PLUGIN_DIR . 'js/admin.js' , array( 'jquery' ), '', true );
 }
 
 add_action( "admin_menu", "background_worker_menu_page" );
 function background_worker_menu_page() {
-	add_management_page( __('Background Worker'), __('Background Worker'), 'manage_options', BG_WORKER_NAME, 'background_worker_page_handler' );
+	add_management_page( __('Background Worker'), __('Background Worker'), 'manage_options', BG_WORKER_ADMIN_MENU_SLUG, 'background_worker_page_handler' );
 }
 
 function background_worker_page_handler() { 
@@ -16,7 +16,7 @@ function background_worker_page_handler() {
 
 	$table_name 	= $wpdb->prefix . BG_WORKER_DB_NAME;
 
-	$page 			= isset($_GET['page']) ? $_GET['page'] : BG_WORKER_NAME;
+	$page 			= isset($_GET['page']) ? $_GET['page'] : BG_WORKER_ADMIN_MENU_SLUG;
 	$page_uri 		= add_query_arg( array( 'page' => $page ), trailingslashit( admin_url() ) . $pagenow );
 	$current_url 	= get_current_url();
 	$nonce 			= wp_create_nonce('clear_background_worker_jobs');
@@ -137,7 +137,7 @@ function background_worker_page_handler() {
 									<tr>
 										<th scope="row"><?php echo $number; ?></th>
 										<th><?php echo $job->id; ?></th>
-										<th class="text-center"><?php echo $job->created_datetime; ?></th>
+										<th class="text-center"><?php echo isset($job->created_datetime) ? $job->created_datetime : '-'; ?></th>
 										<td>
 											<?php 
 												$function = $payload->function;
@@ -173,7 +173,7 @@ function background_worker_page_handler() {
 											<?php 
 												if ( 'failed' == $status ) {
 													echo '<div class="actions">';
-													echo '<a href="#" id="btn-bw-retry-job" data-job-ID="'.$job->id.'" class="button">Retry Job</a>'; 
+													echo '<a href="#" id="" data-job-ID="'.$job->id.'" class="button btn-bw-retry-job">Retry Job</a>'; 
 													echo '<span class="spinner hide"></span>';
 													echo '</div>';
 												} else {
@@ -258,7 +258,7 @@ function background_worker_page_handler() {
 
 // add_action( "admin_notices", "background_worker_admin_notices" );
 function background_worker_admin_notices() {
-	if ( !isset($_GET['page']) || BG_WORKER_NAME != $_GET['page'] ) return;
+	if ( !isset($_GET['page']) || BG_WORKER_ADMIN_MENU_SLUG != $_GET['page'] ) return;
 
 	if ( isset($_GET['action']) && wp_verify_nonce($_GET['action'], 'clear_background_worker_jobs') ) { ?>
 		<div class="notice notice-success is-dismissible">
@@ -271,22 +271,27 @@ function background_worker_admin_notices() {
 add_action( "wp_ajax_retry_background_worker_job", "retry_background_worker_job_ajax_callback" );
 function retry_background_worker_job_ajax_callback() {
 	global $wpdb;
+
 	$table_name = $wpdb->prefix . BG_WORKER_DB_NAME;
+	
 	$response 	= [];
+	
 	$dataForm 	= $_POST['dataForm'];
 	$_POST 		= $dataForm;
 	$job_id 	= $_POST['id'];
 
-	$delete = $wpdb->delete( 
+	$update = $wpdb->update( 
 		$table_name, 
+		array('attempts'=>0), 
 		array('id'=>$job_id), 
+		array('%d'), 
 		array('%d') 
 	);
 
-	if ( !is_wp_error($delete) ) {
+	if ( !is_wp_error($update) ) {
 		$response['message'] = 'Active';
 	} else {
-		$response['message'] = $delete->get_error_message();
+		$response['message'] = $update->get_error_message();
 	}
 
 	wp_send_json($response);

@@ -25,31 +25,32 @@ License: GPL version 2 or later - http://www.gnu.org/licenses/old-licenses/gpl-2
  */
 require_once(plugin_dir_path(__FILE__) . 'admin-page.php');
 
-define('BG_WORKER_NAME', 'background_worker');
-define('BG_WORKER_DIR', plugin_dir_url(__FILE__));
+define('BG_WORKER_PLUGIN_DIR', plugin_dir_url(__FILE__));
+define('BG_WORKER_ADMIN_MENU_SLUG', 'background_worker');
 
-define('BG_WORKER_DB_VERSION',15);
-define('BG_WORKER_DB_NAME','bg_jobs');
+define('BG_WORKER_DB_VERSION', 15);
+define('BG_WORKER_DB_NAME', 'bg_jobs');
 
 if( !defined('BG_WORKER_SLEEP') )
-	define('BG_WORKER_SLEEP', 750000 );
+	define('BG_WORKER_SLEEP', 750000);
 
 if( !defined('BG_WORKER_TIMELIMIT') )
-	define('BG_WORKER_TIMELIMIT', 60 );
+	define('BG_WORKER_TIMELIMIT', 60);
 
 if( !defined('WP_BG_WORKER_DEBUG') )
-	define('WP_BG_WORKER_DEBUG',false );
+	define('WP_BG_WORKER_DEBUG', false);
 
 if( !defined( 'WP_BACKGROUND_WORKER_QUEUE_NAME' ) )
 	define( 'WP_BACKGROUND_WORKER_QUEUE_NAME', 'default' );
 
 $installed_version = intval( get_option('BG_WORKER_DB_VERSION') );
 
-if( $installed_version < BG_WORKER_DB_VERSION) {
+if( $installed_version < BG_WORKER_DB_VERSION ) {
 	// drop and re create
 	if( $installed_version <= 5 ) {
 		global $wpdb;
-  		$db_name = $wpdb->prefix."jobs";
+		
+		$db_name = $wpdb->prefix . "jobs";
 
 		$sql = "DROP TABLE ".$db_name.";";
 		$wpdb->query($sql);
@@ -57,40 +58,55 @@ if( $installed_version < BG_WORKER_DB_VERSION) {
 		wp_background_worker_install_db();
 	}
 
-
 	// drop and re create
 	if( $installed_version <= 10 ) {
 		global $wpdb;
-	  $db_name = $wpdb->prefix.BG_WORKER_DB_NAME;
-	
-		$sql = "ALTER TABLE {$db_name} ADD `created_datetime` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `attempts`;";
+		
+		$db_name = $wpdb->prefix . BG_WORKER_DB_NAME;
+
+		$sql = "ALTER TABLE {$db_name} ADD `created_datetime` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `attempts`;";
 		$wpdb->query($sql);
 	}
 }
 
-
-update_option('BG_WORKER_DB_VERSION', BG_WORKER_DB_VERSION);
+update_option('BG_WORKER_DB_VERSION', BG_WORKER_DB_VERSION, 'no');
 
 function wp_background_worker_install_db() {
-   	global $wpdb;
-  	$db_name = $wpdb->prefix.BG_WORKER_DB_NAME;
+	global $wpdb;
 
-	if($wpdb->get_var("show tables like '$db_name'") != $db_name)
-	{
-		$sql = "CREATE TABLE ".$db_name."
-				( `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-				  `queue` varchar(512) COLLATE utf8_unicode_ci NOT NULL,
-				  `payload` longtext COLLATE utf8_unicode_ci NOT NULL,
-				  `attempts` tinyint(3) UNSIGNED NOT NULL,
-				  PRIMARY KEY(`id`) );";
+	$db_name = $wpdb->prefix . BG_WORKER_DB_NAME;
+
+	// create db table
+	$charset_collate = $wpdb->get_charset_collate();
+
+	if ( $wpdb->get_var("SHOW TABLES LIKE '$db_name'") != $db_name ) {
+		$sql = "CREATE TABLE ".$db_name." 
+				( `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, 
+				  `queue` varchar(255) NOT NULL, 
+				  `payload` longtext NOT NULL, 
+				  `attempts` tinyint(4) UNSIGNED NOT NULL, 
+				  PRIMARY KEY  (`id`) 
+			  ) $charset_collate;";
 
 		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 		dbDelta($sql);
 	}
-
 }
+
 // run the install scripts upon plugin activation
 register_activation_hook(__FILE__,'wp_background_worker_install_db');
+
+/**
+ * Add settings button on plugin actions
+ */
+$plugin = plugin_basename( __FILE__ );
+add_filter( "plugin_action_links_$plugin", "wp_background_worker_add_settings_link" );
+function wp_background_worker_add_settings_link($links) {
+	$menu_page = BG_WORKER_ADMIN_MENU_SLUG;
+	$settings_link = '<a href="tools.php?page='.$menu_page.'">' . __( 'Settings' ) . '</a>';
+	array_unshift( $links, $settings_link );
+	return $links;
+}
 
 if ( !function_exists('get_current_url') ) {
 	function get_current_url() {
@@ -107,7 +123,7 @@ if ( !function_exists('bw_number_format') ) {
 	}
 }
 
-if( !defined( 'WP_CLI' ) ) {
+if( !defined('WP_CLI') ) {
 	return;
 }
 
@@ -120,9 +136,10 @@ function wp_background_add_job( $job, $queue = WP_BACKGROUND_WORKER_QUEUE_NAME )
 	$wpdb->insert(
 		$wpdb->prefix.BG_WORKER_DB_NAME,
 			array(
-				'queue' => $queue,
-				'payload' => $job_data,
-				'attempts' => 0
+				'queue' 			=> $queue, 
+				'created_datetime' 	=> current_time('mysql'), 
+				'payload' 			=> $job_data, 
+				'attempts' 			=> 0 
 			)
 		);
 }
