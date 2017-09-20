@@ -49,7 +49,7 @@ if( $installed_version < BG_WORKER_DB_VERSION ) {
 	// drop and re create
 	if( $installed_version <= 5 ) {
 		global $wpdb;
-		
+
 		$db_name = $wpdb->prefix . "jobs";
 
 		$sql = "DROP TABLE ".$db_name.";";
@@ -61,7 +61,7 @@ if( $installed_version < BG_WORKER_DB_VERSION ) {
 	// drop and re create
 	if( $installed_version <= 10 ) {
 		global $wpdb;
-		
+
 		$db_name = $wpdb->prefix . BG_WORKER_DB_NAME;
 
 		$sql = "ALTER TABLE {$db_name} ADD `created_datetime` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `attempts`;";
@@ -80,12 +80,13 @@ function wp_background_worker_install_db() {
 	$charset_collate = $wpdb->get_charset_collate();
 
 	if ( $wpdb->get_var("SHOW TABLES LIKE '$db_name'") != $db_name ) {
-		$sql = "CREATE TABLE ".$db_name." 
-				( `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, 
-				  `queue` varchar(255) NOT NULL, 
-				  `payload` longtext NOT NULL, 
-				  `attempts` tinyint(4) UNSIGNED NOT NULL, 
-				  PRIMARY KEY  (`id`) 
+		$sql = "CREATE TABLE ".$db_name."
+				( `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+				  `queue` varchar(255) NOT NULL,
+				  `payload` longtext NOT NULL,
+				  `attempts` tinyint(4) UNSIGNED NOT NULL,
+					`created_datetime` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				  PRIMARY KEY  (`id`)
 			  ) $charset_collate;";
 
 		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
