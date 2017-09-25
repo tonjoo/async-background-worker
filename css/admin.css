@@ -21,16 +21,16 @@
 #background-worker .spinner {
 	visibility: visible;
 	position: absolute;
-    top: 0;
-    right: 50%;
-    margin-right: -10px;
+	top: 0;
+	right: 50%;
+	margin-right: -10px;
 }
-#background-worker .spinner::before { 
+#background-worker .spinner::before {
 	content: '';
-    background-image: url('../img/spinner.gif');
-    background-size: 16px 16px;
-    width: 16px;
-    height: 16px;
+	background-image: url('../img/spinner.gif');
+	background-size: 16px 16px;
+	width: 16px;
+	height: 16px;
 }
 
 #background-worker .actions {
@@ -45,54 +45,54 @@
 	float: right;
 }
 
-#background-worker, 
+#background-worker,
 #background-worker table {
 	font-size: 13px;
 }
 
-#background-worker table tbody tr th, 
+#background-worker table tbody tr th,
 #background-worker table tbody tr td {
-    vertical-align: top;
+	vertical-align: top;
 }
 
-#background-worker .bordered-table thead tr th, 
-#background-worker .bordered-table thead tr td, 
-#background-worker .bordered-table tbody tr th, 
-#background-worker .bordered-table tbody tr td, 
-#background-worker .bordered-table tfoot tr th, 
+#background-worker .bordered-table thead tr th,
+#background-worker .bordered-table thead tr td,
+#background-worker .bordered-table tbody tr th,
+#background-worker .bordered-table tbody tr td,
+#background-worker .bordered-table tfoot tr th,
 #background-worker .bordered-table tfoot tr td {
-    border: 1px solid #ddd;
+	border: 1px solid #ddd;
 }
 #background-worker .bordered-table > thead > tr > th,
 #background-worker .bordered-table > thead > tr > td {
-    border-bottom-width: 2px;
+	border-bottom-width: 2px;
 }
-#background-worker .bordered-table > tfoot > tr > th, 
+#background-worker .bordered-table > tfoot > tr > th,
 #background-worker .bordered-table > tfoot > tr > td {
-    border-top-width: 2px;
+	border-top-width: 2px;
 }
-#background-worker .bordered-table > thead:first-child > tr:first-child > th, 
+#background-worker .bordered-table > thead:first-child > tr:first-child > th,
 #background-worker .bordered-table > thead:first-child > tr:first-child > td {
-    border-top: 0;
+	border-top: 0;
 }
-#background-worker .bordered-table > tfoot:first-child > tr:first-child > th, 
+#background-worker .bordered-table > tfoot:first-child > tr:first-child > th,
 #background-worker .bordered-table > tfoot:first-child > tr:first-child > td {
-    border-bottom: 0;
+	border-bottom: 0;
 }
-#background-worker .bordered-table > thead > tr > th, 
-#background-worker .bordered-table > thead > tr > td, 
-#background-worker .bordered-table > tfoot > tr > th, 
+#background-worker .bordered-table > thead > tr > th,
+#background-worker .bordered-table > thead > tr > td,
+#background-worker .bordered-table > tfoot > tr > th,
 #background-worker .bordered-table > tfoot > tr > td {
-    border-left-width: 2px;
+	border-left-width: 2px;
 }
-#background-worker .bordered-table > thead > tr > th:first-child, 
-#background-worker .bordered-table > thead > tr > td:first-child, 
-#background-worker .bordered-table > tfoot > tr > th:first-child, 
+#background-worker .bordered-table > thead > tr > th:first-child,
+#background-worker .bordered-table > thead > tr > td:first-child,
+#background-worker .bordered-table > tfoot > tr > th:first-child,
 #background-worker .bordered-table > tfoot > tr > td:first-child {
-    border-left: 0;
+	border-left: 0;
 }
 
-#background-worker .bordered-table, 
+#background-worker .bordered-table,
 #background-worker .striped-table {
 	background-color: #fff;
 	width: 100%;
@@ -101,30 +101,30 @@
 	margin-bottom: 1em;
 }
 
-#background-worker .bordered-table th, 
+#background-worker .bordered-table th,
 #background-worker .striped-table th {
 	font-weight: 500;
 	padding: 10px;
 }
 
-#background-worker .bordered-table td, 
+#background-worker .bordered-table td,
 #background-worker .striped-table td {
-    padding: 6px 10px;
+	padding: 6px 10px;
 }
 
-#background-worker .bordered-table thead th, 
+#background-worker .bordered-table thead th,
 #background-worker .bordered-table thead td {
 	background-color: #00a0d2;
 	color: #fff;
 }
 
-#background-worker .striped-table thead th, 
+#background-worker .striped-table thead th,
 #background-worker .striped-table thead td {
 	background-color: #00a0d2;
 	color: #fff;
 }
 
-#background-worker .bordered-table th[scope=row], 
+#background-worker .bordered-table th[scope=row],
 #background-worker .striped-table th[scope=row] {
 	width: 15px;
 }
@@ -138,7 +138,7 @@
 }
 
 #background-worker table pre {
-    margin: 0;
+	margin: 0;
 }
 
 #background-worker ul.tabs {
@@ -192,17 +192,16 @@
 	display: inline-block;
 }
 
-#background-worker .pagination .page-numbers.current, 
+#background-worker .pagination .page-numbers.current,
 #background-worker .pagination .page-numbers:hover {
 	background-color: #fbfbfb;
 	color: #00a0d2;
 }
 
-#background-worker .tab-content { 
+#background-worker .tab-content {
 	/*max-width: 991px;*/
 }
 
 #background-worker-log .tab-wrapper .log-text {
 	width: 100%;
 }
-
