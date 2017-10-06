@@ -71,9 +71,10 @@ if ( $installed_version < BG_WORKER_DB_VERSION ) {
 		$sql = "ALTER TABLE {$db_name} ADD `created_datetime` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `attempts`;";
 		$wpdb->query( $sql );
 	}
+
+	update_option( 'BG_WORKER_DB_VERSION', BG_WORKER_DB_VERSION, 'no' );
 }
 
-update_option( 'BG_WORKER_DB_VERSION', BG_WORKER_DB_VERSION, 'no' );
 
 function wp_background_worker_install_db() {
 	global $wpdb;
@@ -96,6 +97,8 @@ function wp_background_worker_install_db() {
 		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
 		dbDelta( $sql );
 	}
+
+	update_option( 'BG_WORKER_DB_VERSION', BG_WORKER_DB_VERSION, 'no' );
 }
 
 // run the install scripts upon plugin activation
@@ -152,10 +155,17 @@ function wp_background_add_job( $job, $queue = WP_BACKGROUND_WORKER_QUEUE_NAME )
 function wp_background_worker_execute_job( $queue = WP_BACKGROUND_WORKER_QUEUE_NAME ) {
 	global $wpdb;
 
-	$job = $wpdb->get_row( 'SELECT * FROM ' . $wpdb->prefix . BG_WORKER_DB_NAME . " WHERE attempts <= 2 AND queue='$queue' ORDER BY id ASC" );
+	$wpdb->query('LOCK TABLES '.$wpdb->prefix . BG_WORKER_DB_NAME.' WRITE');
+
+	$job = $wpdb->get_row( 'SELECT * FROM ' . $wpdb->prefix . BG_WORKER_DB_NAME . " WHERE attempts = 0 AND queue='$queue' ORDER BY id ASC" );
+
+	if( !$job ) {
+		$job = $wpdb->get_row( 'SELECT * FROM ' . $wpdb->prefix . BG_WORKER_DB_NAME . " WHERE attempts <= 2 AND queue='$queue' ORDER BY id ASC" );
+	}
 
 	// No Job
 	if ( ! $job ) {
+		$wpdb->query("UNLOCK TABLES");
 		wp_background_worker_debug( 'No job available..' );
 		return;
 	}
@@ -172,6 +182,7 @@ function wp_background_worker_execute_job( $queue = WP_BACKGROUND_WORKER_QUEUE_N
 				'id' => $job->id,
 			)
 		);
+		$wpdb->query("UNLOCK TABLES");
 
 		return;
 	}
@@ -187,6 +198,7 @@ function wp_background_worker_execute_job( $queue = WP_BACKGROUND_WORKER_QUEUE_N
 			'id' => $job->id,
 		)
 	);
+	$wpdb->query("UNLOCK TABLES");
 
 	try {
 		$function = $job_data->function;
