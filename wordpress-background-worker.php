@@ -21,7 +21,7 @@ License: GPL version 2 or later - http://www.gnu.org/licenses/old-licenses/gpl-2
  *
  * ## EXAMPLES
  *
- *     $ wp background-worker
+ * $ wp background-worker
  */
 require_once( plugin_dir_path( __FILE__ ) . 'admin-page.php' );
 
@@ -138,26 +138,35 @@ if ( ! defined( 'WP_CLI' ) ) {
 function wp_background_add_job( $job, $queue = WP_BACKGROUND_WORKER_QUEUE_NAME ) {
 	global $wpdb;
 
+	$table_name = $wpdb->prefix . BG_WORKER_DB_NAME;
+
 	// Serialize class
 	$job_data = serialize( $job );
 
-	$wpdb->insert(
-		$wpdb->prefix . BG_WORKER_DB_NAME,
-		array(
-			'queue'             => $queue,
-			'created_datetime'  => current_time( 'mysql' ),
-			'payload'           => $job_data,
-			'attempts'          => 0,
-		)
+	$wpdb->insert( 
+		$table_name, 
+		array( 
+			'queue' 			=> $queue, 
+			'created_datetime' 	=> current_time('mysql'), 
+			'payload' 			=> $job_data, 
+			'attempts' 			=> 0 
+		), 
+		array( '%s', '%s', '%s', '%d' ) 
 	);
 }
 
 function wp_background_worker_execute_job( $queue = WP_BACKGROUND_WORKER_QUEUE_NAME ) {
 	global $wpdb;
 
-	$wpdb->query('LOCK TABLES '.$wpdb->prefix . BG_WORKER_DB_NAME.' WRITE');
+	$table_name = $wpdb->prefix . BG_WORKER_DB_NAME;
 
-	$job = $wpdb->get_row( 'SELECT * FROM ' . $wpdb->prefix . BG_WORKER_DB_NAME . " WHERE attempts = 0 AND queue='$queue' ORDER BY id ASC" );
+	$wpdb->query('LOCK TABLES '.$table_name.' WRITE');
+
+	$job = $wpdb->get_row( $wpdb->prepare( 
+		"
+		SELECT * FROM $table_name WHERE attempts <= %d AND queue=%s ORDER BY id ASC 
+		", array( 2, $queue ) 
+	) );
 
 	if( !$job ) {
 		$job = $wpdb->get_row( 'SELECT * FROM ' . $wpdb->prefix . BG_WORKER_DB_NAME . " WHERE attempts <= 2 AND queue='$queue' ORDER BY id ASC" );
@@ -174,53 +183,50 @@ function wp_background_worker_execute_job( $queue = WP_BACKGROUND_WORKER_QUEUE_N
 
 	if ( ! $job_data ) {
 
-		wp_background_worker_debug( 'Delete malformated job..' );
+		wp_background_worker_debug("Delete malformated job..");
 
-		$wpdb->delete(
-			$wpdb->prefix . BG_WORKER_DB_NAME,
-			array(
-				'id' => $job->id,
-			)
+		$wpdb->delete( 
+			$table_name, 
+			array( 'id' => $job->id ), 
+			array( '%d' ) 
 		);
+
 		$wpdb->query("UNLOCK TABLES");
 
 		return;
 	}
 
-	wp_background_worker_debug( "Working on job ID = {$job->id} " );
+	wp_background_worker_debug( "Working on job ID = {$job->id}" );
 
-	$wpdb->update(
-		$wpdb->prefix . BG_WORKER_DB_NAME,
-		array(
-			'attempts' => $job->attempts + 1,
-		),
-		array(
-			'id' => $job->id,
-		)
+	$wpdb->update( 
+		$table_name, 
+		array( 
+			'attempts' => (int) $job->attempts + 1 
+		), 
+		array( 'id' => $job->id ) 
 	);
+
 	$wpdb->query("UNLOCK TABLES");
 
-	try {
+	try { 
 		$function = $job_data->function;
-		$data = is_null( $job_data->user_data ) ? false : $job_data->user_data ;
+		$data = is_null( $job_data->user_data ) ? false : $job_data->user_data;
 
 		if ( is_callable( $function ) ) {
-			$function( $data );
+			$function($data);
 		} else {
-			call_user_func_array( $function,$data );
+			call_user_func_array( $function, $data );
 		}
 
 		// delete data
-		$wpdb->delete(
-			$wpdb->prefix . BG_WORKER_DB_NAME,
-			array(
-				'id' => $job->id,
-			)
+		$wpdb->delete( 
+			$table_name, 
+			array( 'id' => $job->id ), 
+			array( '%d' ) 
 		);
-	} catch ( Exception $e ) {
-		 WP_CLI::error( 'Caught exception: ' . $e->getMessage() );
-	}
-
+	} catch (Exception $e) { 
+		 WP_CLI::error( "Caught exception: ".$e->getMessage() );
+	} 
 }
 
 /**
@@ -231,21 +237,22 @@ function wp_background_worker_execute_job( $queue = WP_BACKGROUND_WORKER_QUEUE_N
  */
 
 $background_worker_cmd = function( $args = array() ) {
-	if ( ( isset( $args[0] ) && 'listen' === $args[0] ) ) {
+
+	if ( ( isset( $args[0] ) && 'listen' === $args[0] ) ) { 
 		$listen = true;
-	} else {
+	} else { 
 		$listen = false;
-	}
+	} 
 
 	if ( $listen && ! function_exists( 'exec' ) ) {
 		wp_background_worker_debug( 'Cannot run WordPress background worker on `listen` mode, please use `listen-loop` instead' );
 	}
 
-	if ( isset( $args[0] ) && 'listen-loop' === $args[0] ) {
+	if ( isset( $args[0] ) && 'listen-loop' === $args[0] ) { 
 		$listen_loop = true;
-	} else {
+	} else { 
 		$listen_loop = false;
-	}
+	} 
 
 	if ( ! $listen && ! $listen_loop ) {
 		if ( function_exists( 'set_time_limit' ) ) {
@@ -257,14 +264,13 @@ $background_worker_cmd = function( $args = array() ) {
 
 	// listen-loop mode
 	// @todo max execution time on listen_loop
-	if ( $listen_loop ) {
-
-		while ( true ) {
+	if ( $listen_loop ) { 
+		while ( true ) { 
 			wp_background_worker_check_memory();
 
 			usleep( BG_WORKER_SLEEP );
 			wp_background_worker_execute_job();
-		}
+		} 
 	} elseif ( $listen ) {
 		// start daemon
 		while ( true ) {
@@ -277,12 +283,12 @@ $background_worker_cmd = function( $args = array() ) {
 			usleep( BG_WORKER_SLEEP );
 			wp_background_worker_debug( 'Spawn next worker' );
 
-			$_ = $_SERVER['argv'][0];  // or full path to php binary
+			$_ = $_SERVER['argv'][0]; // or full path to php binary
 
-			array_unshift( $args,'background-worker' );
+			array_unshift( $args, 'background-worker' );
 
 			if ( function_exists( 'posix_geteuid' ) && posix_geteuid() == 0 && ! in_array( '--allow-root', $args ) ) {
-				array_unshift( $args,'--allow-root' );
+				array_unshift( $args, '--allow-root' );
 			}
 
 			$args = implode( ' ', $args );
@@ -298,7 +304,6 @@ $background_worker_cmd = function( $args = array() ) {
 
 		}
 	} else {
-
 		wp_background_worker_execute_job();
 	}
 
@@ -310,14 +315,14 @@ function wp_background_worker_check_memory() {
 
 	if ( WP_BG_WORKER_DEBUG ) {
 		$usage = memory_get_usage() / 1024 / 1024;
+
 		wp_background_worker_debug( 'Memory Usage : ' . round( $usage, 2 ) . 'MB' );
 	}
 
-	if ( ( memory_get_usage() / 1024 / 1024) >= WP_MEMORY_LIMIT ) {
-			   WP_CLI::log( 'Memory limit execeed' );
+	if ( ( memory_get_usage() / 1024 / 1024) >= WP_MEMORY_LIMIT ) { 
+		WP_CLI::log( 'Memory limit execeed' );
 		exit();
 	}
-
 }
 
 WP_CLI::add_command( 'background-worker', $background_worker_cmd );
