@@ -1,14 +1,14 @@
-=== WordPress Background Worker ===
-Contributors: todi.adiyatmo
-Description: Background Worker for WordPress. 
-Tags: router
+=== Async Background Worker ===
+Contributors: todi.adiyatmo, gamaup
+Description: Async Background Worker for WordPress. 
+Tags: background worker, async background worker
 Requires at least: 4.4
 Tested up to: 4.8.0
 Version: 1.0
 License: LGPL
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
-WordPress Background Worker, more information please visit this page https://tonjoo.github.io/wordpress-background-worker/
+Async Background Worker, more information please visit this page https://tonjoo.github.io/async-background-worker/
 
 == Sample Usage ==
 
@@ -46,13 +46,13 @@ Make sure you have WP CLI installed on your system
 
 ###  `wp background-worker`
 
-Run WordPress Background Worker once. 
+Run Async Background Worker once. 
 
 ###  `wp background-worker listen`
 
-Run WordPress Background Worker in loop (contiously), this is what you want for background worker. WordPress framework is restart in each loop.
+Run Async Background Worker in loop (contiously), this is what you want for background worker. WordPress framework is restart in each loop.
 
 
 ###  `wp background-worker listen-daemon`
 
-Run WordPress Background Worker in loop (contiously) without restart the WordPress framework. **NOTE** if you use this mode, any code change will not be reflected. You must restart the Wordpress Background Worker each time you change code. This save memory and speed up thing. 
+Run Async Background Worker in loop (contiously) without restart the WordPress framework. **NOTE** if you use this mode, any code change will not be reflected. You must restart the Async Background Worker each time you change code. This save memory and speed up thing. 

@@ -2,21 +2,21 @@
 
 add_action( 'admin_enqueue_scripts', 'wp_background_worker_admin_scripts' );
 function wp_background_worker_admin_scripts() {
-	wp_enqueue_style( 'bg-worker-admin-style', BG_WORKER_PLUGIN_DIR . 'css/admin.css', array(), false );
-	wp_enqueue_script( 'bg-worker-admin-js', BG_WORKER_PLUGIN_DIR . 'js/admin.js' , array( 'jquery' ), '', true );
+	wp_enqueue_style( 'bg-worker-admin-style', ABW_PLUGIN_DIR . 'css/admin.css', array(), false );
+	wp_enqueue_script( 'bg-worker-admin-js', ABW_PLUGIN_DIR . 'js/admin.js' , array( 'jquery' ), '', true );
 }
 
 add_action( 'admin_menu', 'background_worker_menu_page' );
 function background_worker_menu_page() {
-	add_management_page( __( 'Background Worker' ), __( 'Background Worker' ), 'manage_options', BG_WORKER_ADMIN_MENU_SLUG, 'background_worker_page_handler' );
+	add_management_page( __( 'Background Worker' ), __( 'Background Worker' ), 'manage_options', ABW_ADMIN_MENU_SLUG, 'background_worker_page_handler' );
 }
 
 function background_worker_page_handler() {
 	global $wpdb, $pagenow;
 
-	$table_name     = $wpdb->prefix . BG_WORKER_DB_NAME;
+	$table_name     = $wpdb->prefix . ABW_DB_NAME;
 
-	$page           = isset( $_GET['page'] ) ? $_GET['page'] : BG_WORKER_ADMIN_MENU_SLUG;
+	$page           = isset( $_GET['page'] ) ? $_GET['page'] : ABW_ADMIN_MENU_SLUG;
 	$page_uri       = add_query_arg(
 		array(
 			'page' => $page,
@@ -304,7 +304,7 @@ if ( 'failed' == $status ) {
 
 // add_action( "admin_notices", "background_worker_admin_notices" );
 function background_worker_admin_notices() {
-	if ( ! isset( $_GET['page'] ) || BG_WORKER_ADMIN_MENU_SLUG != $_GET['page'] ) {
+	if ( ! isset( $_GET['page'] ) || ABW_ADMIN_MENU_SLUG != $_GET['page'] ) {
 		return;
 	}
 
@@ -321,7 +321,7 @@ add_action( 'wp_ajax_retry_background_worker_job', 'retry_background_worker_job_
 function retry_background_worker_job_ajax_callback() {
 	global $wpdb;
 
-	$table_name = $wpdb->prefix . BG_WORKER_DB_NAME;
+	$table_name = $wpdb->prefix . ABW_DB_NAME;
 
 	$response   = [];
 

@@ -1,11 +1,11 @@
 <?php
 /*
-Plugin Name: WordPress Background Worker
+Plugin Name: Async Background Worker
 Description: Aysinchrounous Background Worker for WordPress
 Author: todiadiyatmo
 Author URI: http://todiadiyatmo.com/
-Version: 0.3
-Text Domain: wordpress-importer
+Version: 1.0
+Text Domain: awb
 License: GPL version 2 or later - http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 */
 
@@ -25,31 +25,31 @@ License: GPL version 2 or later - http://www.gnu.org/licenses/old-licenses/gpl-2
  */
 require_once( plugin_dir_path( __FILE__ ) . 'admin-page.php' );
 
-define( 'BG_WORKER_PLUGIN_DIR', plugin_dir_url( __FILE__ ) );
-define( 'BG_WORKER_ADMIN_MENU_SLUG', 'background_worker' );
+define( 'ABW_PLUGIN_DIR', plugin_dir_url( __FILE__ ) );
+define( 'ABW_ADMIN_MENU_SLUG', 'background_worker' );
 
-define( 'BG_WORKER_DB_VERSION', 15 );
-define( 'BG_WORKER_DB_NAME', 'bg_jobs' );
+define( 'ABW_DB_VERSION', 15 );
+define( 'ABW_DB_NAME', 'bg_jobs' );
 
-if ( ! defined( 'BG_WORKER_SLEEP' ) ) {
-	define( 'BG_WORKER_SLEEP', 750000 );
+if ( ! defined( 'ABW_SLEEP' ) ) {
+	define( 'ABW_SLEEP', 750000 );
 }
 
-if ( ! defined( 'BG_WORKER_TIMELIMIT' ) ) {
-	define( 'BG_WORKER_TIMELIMIT', 60 );
+if ( ! defined( 'ABW_TIMELIMIT' ) ) {
+	define( 'ABW_TIMELIMIT', 60 );
 }
 
-if ( ! defined( 'WP_BG_WORKER_DEBUG' ) ) {
-	define( 'WP_BG_WORKER_DEBUG', false );
+if ( ! defined( 'ABW_DEBUG' ) ) {
+	define( 'ABW_DEBUG', false );
 }
 
-if ( ! defined( 'WP_BACKGROUND_WORKER_QUEUE_NAME' ) ) {
-	define( 'WP_BACKGROUND_WORKER_QUEUE_NAME', 'default' );
+if ( ! defined( 'ABW_QUEUE_NAME' ) ) {
+	define( 'ABW_QUEUE_NAME', 'default' );
 }
 
-$installed_version = intval( get_option( 'BG_WORKER_DB_VERSION' ) );
+$installed_version = intval( get_option( 'ABW_DB_VERSION' ) );
 
-if ( $installed_version < BG_WORKER_DB_VERSION ) {
+if ( $installed_version < ABW_DB_VERSION ) {
 	// drop and re create
 	if ( $installed_version <= 5 ) {
 		global $wpdb;
@@ -59,27 +59,27 @@ if ( $installed_version < BG_WORKER_DB_VERSION ) {
 		$sql = 'DROP TABLE ' . $db_name . ';';
 		$wpdb->query( $sql );
 
-		wp_background_worker_install_db();
+		async_background_worker_install_db();
 	}
 
 	// drop and re create
 	if ( $installed_version <= 10 ) {
 		global $wpdb;
 
-		$db_name = $wpdb->prefix . BG_WORKER_DB_NAME;
+		$db_name = $wpdb->prefix . ABW_DB_NAME;
 
 		$sql = "ALTER TABLE {$db_name} ADD `created_datetime` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `attempts`;";
 		$wpdb->query( $sql );
 	}
 
-	update_option( 'BG_WORKER_DB_VERSION', BG_WORKER_DB_VERSION, 'no' );
+	update_option( 'ABW_DB_VERSION', ABW_DB_VERSION, 'no' );
 }
 
 
-function wp_background_worker_install_db() {
+function async_background_worker_install_db() {
 	global $wpdb;
 
-	$db_name = $wpdb->prefix . BG_WORKER_DB_NAME;
+	$db_name = $wpdb->prefix . ABW_DB_NAME;
 
 	// create db table
 	$charset_collate = $wpdb->get_charset_collate();
@@ -98,19 +98,19 @@ function wp_background_worker_install_db() {
 		dbDelta( $sql );
 	}
 
-	update_option( 'BG_WORKER_DB_VERSION', BG_WORKER_DB_VERSION, 'no' );
+	update_option( 'ABW_DB_VERSION', ABW_DB_VERSION, 'no' );
 }
 
 // run the install scripts upon plugin activation
-register_activation_hook( __FILE__,'wp_background_worker_install_db' );
+register_activation_hook( __FILE__,'async_background_worker_install_db' );
 
 /**
  * Add settings button on plugin actions
  */
 $plugin = plugin_basename( __FILE__ );
-add_filter( "plugin_action_links_$plugin", 'wp_background_worker_add_settings_link' );
-function wp_background_worker_add_settings_link( $links ) {
-	$menu_page = BG_WORKER_ADMIN_MENU_SLUG;
+add_filter( "plugin_action_links_$plugin", 'async_background_worker_add_settings_link' );
+function async_background_worker_add_settings_link( $links ) {
+	$menu_page = ABW_ADMIN_MENU_SLUG;
 	$settings_link = '<a href="tools.php?page=' . $menu_page . '">' . __( 'Settings' ) . '</a>';
 	array_unshift( $links, $settings_link );
 	return $links;
@@ -135,10 +135,10 @@ if ( ! defined( 'WP_CLI' ) ) {
 	return;
 }
 
-function wp_background_add_job( $job, $queue = WP_BACKGROUND_WORKER_QUEUE_NAME ) {
+function wp_background_add_job( $job, $queue = ABW_QUEUE_NAME ) {
 	global $wpdb;
 
-	$table_name = $wpdb->prefix . BG_WORKER_DB_NAME;
+	$table_name = $wpdb->prefix . ABW_DB_NAME;
 
 	// Serialize class
 	$job_data = serialize( $job );
@@ -155,10 +155,10 @@ function wp_background_add_job( $job, $queue = WP_BACKGROUND_WORKER_QUEUE_NAME )
 	);
 }
 
-function wp_background_worker_execute_job( $queue = WP_BACKGROUND_WORKER_QUEUE_NAME ) {
+function async_background_worker_add_settings_link( $queue = ABW_QUEUE_NAME ) {
 	global $wpdb;
 
-	$table_name = $wpdb->prefix . BG_WORKER_DB_NAME;
+	$table_name = $wpdb->prefix . ABW_DB_NAME;
 
 	$wpdb->query('LOCK TABLES '.$table_name.' WRITE');
 
@@ -169,13 +169,13 @@ function wp_background_worker_execute_job( $queue = WP_BACKGROUND_WORKER_QUEUE_N
 	) );
 
 	if( !$job ) {
-		$job = $wpdb->get_row( 'SELECT * FROM ' . $wpdb->prefix . BG_WORKER_DB_NAME . " WHERE attempts <= 2 AND queue='$queue' ORDER BY id ASC" );
+		$job = $wpdb->get_row( 'SELECT * FROM ' . $wpdb->prefix . ABW_DB_NAME . " WHERE attempts <= 2 AND queue='$queue' ORDER BY id ASC" );
 	}
 
 	// No Job
 	if ( ! $job ) {
 		$wpdb->query("UNLOCK TABLES");
-		wp_background_worker_debug( 'No job available..' );
+		async_background_worker_debug( 'No job available..' );
 		return;
 	}
 
@@ -183,7 +183,7 @@ function wp_background_worker_execute_job( $queue = WP_BACKGROUND_WORKER_QUEUE_N
 
 	if ( ! $job_data ) {
 
-		wp_background_worker_debug("Delete malformated job..");
+		async_background_worker_debug("Delete malformated job..");
 
 		$wpdb->delete( 
 			$table_name, 
@@ -196,7 +196,7 @@ function wp_background_worker_execute_job( $queue = WP_BACKGROUND_WORKER_QUEUE_N
 		return;
 	}
 
-	wp_background_worker_debug( "Working on job ID = {$job->id}" );
+	async_background_worker_debug( "Working on job ID = {$job->id}" );
 
 	$wpdb->update( 
 		$table_name, 
@@ -245,7 +245,7 @@ $background_worker_cmd = function( $args = array() ) {
 	} 
 
 	if ( $listen && ! function_exists( 'exec' ) ) {
-		wp_background_worker_debug( 'Cannot run WordPress background worker on `listen` mode, please use `listen-loop` instead' );
+		async_background_worker_debug( 'Cannot run WordPress background worker on `listen` mode, please use `listen-loop` instead' );
 	}
 
 	if ( isset( $args[0] ) && 'listen-loop' === $args[0] ) { 
@@ -256,9 +256,9 @@ $background_worker_cmd = function( $args = array() ) {
 
 	if ( ! $listen && ! $listen_loop ) {
 		if ( function_exists( 'set_time_limit' ) ) {
-			 set_time_limit( BG_WORKER_TIMELIMIT );
+			 set_time_limit( ABW_TIMELIMIT );
 		} elseif ( function_exists( 'ini_set' ) ) {
-			ini_set( 'max_execution_time', BG_WORKER_TIMELIMIT );
+			ini_set( 'max_execution_time', ABW_TIMELIMIT );
 		}
 	}
 
@@ -266,10 +266,10 @@ $background_worker_cmd = function( $args = array() ) {
 	// @todo max execution time on listen_loop
 	if ( $listen_loop ) { 
 		while ( true ) { 
-			wp_background_worker_check_memory();
+			async_background_worker_check_memory();
 
-			usleep( BG_WORKER_SLEEP );
-			wp_background_worker_execute_job();
+			usleep( ABW_SLEEP );
+			async_background_worker_add_settings_link();
 		} 
 	} elseif ( $listen ) {
 		// start daemon
@@ -277,11 +277,11 @@ $background_worker_cmd = function( $args = array() ) {
 
 			$output = array();
 
-			wp_background_worker_check_memory();
+			async_background_worker_check_memory();
 			$args = array();
 
-			usleep( BG_WORKER_SLEEP );
-			wp_background_worker_debug( 'Spawn next worker' );
+			usleep( ABW_SLEEP );
+			async_background_worker_debug( 'Spawn next worker' );
 
 			$_ = $_SERVER['argv'][0]; // or full path to php binary
 
@@ -300,23 +300,23 @@ $background_worker_cmd = function( $args = array() ) {
 				WP_CLI::log( $echo );
 			}
 
-			wp_background_worker_output_buffer_check();
+			async_background_worker_output_buffer_check();
 
 		}
 	} else {
-		wp_background_worker_execute_job();
+		async_background_worker_add_settings_link();
 	}
 
-	wp_background_worker_output_buffer_check();
+	async_background_worker_output_buffer_check();
 	exit();
 };
 
-function wp_background_worker_check_memory() {
+function async_background_worker_check_memory() {
 
-	if ( WP_BG_WORKER_DEBUG ) {
+	if ( ABW_DEBUG ) {
 		$usage = memory_get_usage() / 1024 / 1024;
 
-		wp_background_worker_debug( 'Memory Usage : ' . round( $usage, 2 ) . 'MB' );
+		async_background_worker_debug( 'Memory Usage : ' . round( $usage, 2 ) . 'MB' );
 	}
 
 	if ( ( memory_get_usage() / 1024 / 1024) >= WP_MEMORY_LIMIT ) { 
@@ -327,14 +327,14 @@ function wp_background_worker_check_memory() {
 
 WP_CLI::add_command( 'background-worker', $background_worker_cmd );
 
-function wp_background_worker_debug( $msg ) {
+function async_background_worker_debug( $msg ) {
 
 	if ( WP_BG_WORKER_DEBUG ) {
 		WP_CLI::log( $msg );
 	}
 }
 
-function wp_background_worker_output_buffer_check() {
+function async_background_worker_output_buffer_check() {
 
 	@ob_flush();
 	@flush();
