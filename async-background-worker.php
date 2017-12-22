@@ -135,7 +135,7 @@ if ( ! defined( 'WP_CLI' ) ) {
 	return;
 }
 
-function wp_background_add_job( $job, $queue = ABW_QUEUE_NAME ) {
+function add_async_job( $job, $queue = ABW_QUEUE_NAME ) {
 	global $wpdb;
 
 	$table_name = $wpdb->prefix . ABW_DB_NAME;
@@ -155,7 +155,12 @@ function wp_background_add_job( $job, $queue = ABW_QUEUE_NAME ) {
 	);
 }
 
-function async_background_worker_add_settings_link( $queue = ABW_QUEUE_NAME ) {
+// alias
+function wp_background_add_job( $job, $queue = ABW_QUEUE_NAME ) {
+	add_async_job( $job, $queue );
+}
+
+function async_background_worker_execute_job( $queue = ABW_QUEUE_NAME ) {
 	global $wpdb;
 
 	$table_name = $wpdb->prefix . ABW_DB_NAME;
@@ -269,7 +274,7 @@ $background_worker_cmd = function( $args = array() ) {
 			async_background_worker_check_memory();
 
 			usleep( ABW_SLEEP );
-			async_background_worker_add_settings_link();
+			async_background_worker_execute_job();
 		} 
 	} elseif ( $listen ) {
 		// start daemon
@@ -304,7 +309,7 @@ $background_worker_cmd = function( $args = array() ) {
 
 		}
 	} else {
-		async_background_worker_add_settings_link();
+		async_background_worker_execute_job();
 	}
 
 	async_background_worker_output_buffer_check();

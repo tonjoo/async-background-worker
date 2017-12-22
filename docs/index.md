@@ -9,7 +9,7 @@ Make sure you have WP CLI installed on your system
 
 ## Add job to queue
 
-1. Add new job to new worker queue using `wp_background_job` command 
+1. Add new job to new worker queue using `add_async_job` command 
     ```
     $job = new stdClass();  
     // the function to run  
@@ -17,7 +17,7 @@ Make sure you have WP CLI installed on your system
     // our user entered data  
     $job->user_data = array('data'=>'some_data');
     
-    wp_background_add_job($job);
+    add_async_job($job);
     ```
 2. Implement function 
     ```
