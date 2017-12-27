@@ -21,6 +21,9 @@ We can run a very long task in the background, for example we need to import 100
 = WP-CLI =
 Make sure you have WP CLI installed on your system
 
+= Support Forum =
+[https://forum.tonjoostudio.com/thread-category/async-background-worker/](https://forum.tonjoostudio.com/thread-category/async-background-worker/ "Support")
+
 == Add job to queue ==
 
 1. Add new job to new worker queue using `add_async_job` command 
