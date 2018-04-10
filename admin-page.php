@@ -163,7 +163,7 @@ if ( 'failed' == $status ) {
 							<th rowspan="2"><?php _e( 'Created Date Time' ); ?></th>
 							<th rowspan="2"><?php _e( 'Job' ); ?></th>
 							<th rowspan="2"><?php _e( 'Queue' ); ?></th>
-							<th rowspan="2"><?php _e( 'Attemps' ); ?></th>
+							<th rowspan="2"><?php _e( 'Attempts' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -260,7 +260,7 @@ if ( 'failed' == $status ) {
 			<div class="tab-wrapper">
 				<?php
 				if ( ! defined( 'BACKGROUND_WORKER_LOG' ) || ! BACKGROUND_WORKER_LOG ) {
-					$content = 'No Log to diplay please define BACKGROUND_WORKER_LOG file in your wp-config.php';
+					$content = 'No Log to display. Please define BACKGROUND_WORKER_LOG file in your wp-config.php.';
 				} elseif ( ! function_exists( 'file_get_contents' ) ) {
 					$content = 'Cannot read log file_get_contents() function did not exists.';
 				} else {
@@ -287,7 +287,7 @@ if ( 'failed' == $status ) {
 							$content .= $value . "\n";
 						}
 						if ( $content == '' ) {
-							$content = 'Nothing to read, permission problem maybe ? ';
+							$content = 'Nothing to read, permission problem maybe?';
 						}
 					} else {
 						$content = 'No Log';
