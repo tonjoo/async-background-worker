@@ -87,8 +87,8 @@ function background_worker_page_handler() {
 		?>
 
 		<ul class="tabs">
-			<li class="tab-link current" data-tab="background-worker-job">Jobs</li>
-			<li class="tab-link" data-tab="background-worker-log">Log</li>
+			<li class="tab-link current" data-tab="background-worker-job"><?php _e('Jobs'); ?></li>
+			<li class="tab-link" data-tab="background-worker-log"><?php _e('Log'); ?></li>
 		</ul>
 
 		<div id="background-worker-job" class="tab-content current">
