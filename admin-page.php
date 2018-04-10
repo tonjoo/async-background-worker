@@ -106,7 +106,7 @@ function background_worker_page_handler() {
 													if ( '' == $status ) {
 														echo 'current';}
 ?>
-">Semua</a> (<?php echo bw_number_format( $total_jobs ); ?>) | </li>
+"><?php _e('All Jobs'); ?></a> (<?php echo bw_number_format( $total_jobs ); ?>) | </li>
 							<li><a href="
 							<?php
 							echo add_query_arg(
@@ -120,7 +120,7 @@ function background_worker_page_handler() {
 if ( 'active' == $status ) {
 	echo 'current';}
 ?>
-">Active Jobs</a> (<?php echo bw_number_format( $total_active_jobs ); ?>) | </li>
+"><?php _e('Active Jobs'); ?></a> (<?php echo bw_number_format( $total_active_jobs ); ?>) | </li>
 							<li><a href="
 							<?php
 							echo add_query_arg(
@@ -134,7 +134,7 @@ if ( 'active' == $status ) {
 if ( 'failed' == $status ) {
 	echo 'current';}
 ?>
-">Failed Jobs</a> (<?php echo bw_number_format( $total_failed_jobs ); ?>)</li>
+"><?php _e('Failed Jobs'); ?></a> (<?php echo bw_number_format( $total_failed_jobs ); ?>)</li>
 						</ul>
 					</div>
 					
@@ -231,7 +231,7 @@ if ( 'failed' == $status ) {
 						} else {
 						?>
 								<tr>
-									<td colspan="6" class="text-center"><?php _e( 'Empty job.' ); ?></td>
+									<td colspan="6" class="text-center"><?php _e( 'No jobs' ); ?>.</td>
 								</tr>
 								<?php
 						}
