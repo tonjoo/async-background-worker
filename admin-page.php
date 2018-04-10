@@ -1,4 +1,4 @@
-<?PHP
+<?php
 
 add_action( 'admin_enqueue_scripts', 'wp_background_worker_admin_scripts' );
 function wp_background_worker_admin_scripts() {
