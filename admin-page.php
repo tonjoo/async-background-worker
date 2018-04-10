@@ -260,9 +260,9 @@ if ( 'failed' == $status ) {
 			<div class="tab-wrapper">
 				<?php
 				if ( ! defined( 'BACKGROUND_WORKER_LOG' ) || ! BACKGROUND_WORKER_LOG ) {
-					$content = 'No Log to display. Please define BACKGROUND_WORKER_LOG file in your wp-config.php.';
+					$content = 'No log file to display. Please define BACKGROUND_WORKER_LOG file in your wp-config.php.';
 				} elseif ( ! function_exists( 'file_get_contents' ) ) {
-					$content = 'Cannot read log file_get_contents() function did not exists.';
+					$content = 'Cannot read log. Function file_get_contents() does not exist.';
 				} else {
 
 					global $wp_filesystem;
