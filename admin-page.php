@@ -1,4 +1,4 @@
-<?PHP
+<?php
 
 add_action( 'admin_enqueue_scripts', 'wp_background_worker_admin_scripts' );
 function wp_background_worker_admin_scripts() {
@@ -87,8 +87,8 @@ function background_worker_page_handler() {
 		?>
 
 		<ul class="tabs">
-			<li class="tab-link current" data-tab="background-worker-job">Job</li>
-			<li class="tab-link" data-tab="background-worker-log">Log</li>
+			<li class="tab-link current" data-tab="background-worker-job"><?php _e('Jobs'); ?></li>
+			<li class="tab-link" data-tab="background-worker-log"><?php _e('Log'); ?></li>
 		</ul>
 
 		<div id="background-worker-job" class="tab-content current">
@@ -106,7 +106,7 @@ function background_worker_page_handler() {
 													if ( '' == $status ) {
 														echo 'current';}
 ?>
-">Semua</a> (<?php echo bw_number_format( $total_jobs ); ?>) | </li>
+"><?php _e('All Jobs'); ?></a> (<?php echo bw_number_format( $total_jobs ); ?>) | </li>
 							<li><a href="
 							<?php
 							echo add_query_arg(
@@ -120,7 +120,7 @@ function background_worker_page_handler() {
 if ( 'active' == $status ) {
 	echo 'current';}
 ?>
-">Active Jobs</a> (<?php echo bw_number_format( $total_active_jobs ); ?>) | </li>
+"><?php _e('Active Jobs'); ?></a> (<?php echo bw_number_format( $total_active_jobs ); ?>) | </li>
 							<li><a href="
 							<?php
 							echo add_query_arg(
@@ -134,7 +134,7 @@ if ( 'active' == $status ) {
 if ( 'failed' == $status ) {
 	echo 'current';}
 ?>
-">Failed Jobs</a> (<?php echo bw_number_format( $total_failed_jobs ); ?>)</li>
+"><?php _e('Failed Jobs'); ?></a> (<?php echo bw_number_format( $total_failed_jobs ); ?>)</li>
 						</ul>
 					</div>
 					
@@ -163,7 +163,7 @@ if ( 'failed' == $status ) {
 							<th rowspan="2"><?php _e( 'Created Date Time' ); ?></th>
 							<th rowspan="2"><?php _e( 'Job' ); ?></th>
 							<th rowspan="2"><?php _e( 'Queue' ); ?></th>
-							<th rowspan="2"><?php _e( 'Attemps' ); ?></th>
+							<th rowspan="2"><?php _e( 'Attempts' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -231,7 +231,7 @@ if ( 'failed' == $status ) {
 						} else {
 						?>
 								<tr>
-									<td colspan="6" class="text-center"><?php _e( 'Empty job.' ); ?></td>
+									<td colspan="6" class="text-center"><?php _e( 'No jobs' ); ?>.</td>
 								</tr>
 								<?php
 						}
@@ -260,9 +260,9 @@ if ( 'failed' == $status ) {
 			<div class="tab-wrapper">
 				<?php
 				if ( ! defined( 'BACKGROUND_WORKER_LOG' ) || ! BACKGROUND_WORKER_LOG ) {
-					$content = 'No Log to diplay please define BACKGROUND_WORKER_LOG file in your wp-config.php';
+					$content = 'No log file to display. Please define BACKGROUND_WORKER_LOG file in your wp-config.php.';
 				} elseif ( ! function_exists( 'file_get_contents' ) ) {
-					$content = 'Cannot read log file_get_contents() function did not exists.';
+					$content = 'Cannot read log. Function file_get_contents() does not exist.';
 				} else {
 
 					global $wp_filesystem;
@@ -287,7 +287,7 @@ if ( 'failed' == $status ) {
 							$content .= $value . "\n";
 						}
 						if ( $content == '' ) {
-							$content = 'Nothing to read, permission problem maybe ? ';
+							$content = 'Nothing to read, permission problem maybe?';
 						}
 					} else {
 						$content = 'No Log';
