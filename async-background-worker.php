@@ -35,8 +35,12 @@ if ( ! defined( 'ABW_SLEEP' ) ) {
 	define( 'ABW_SLEEP', 750000 );
 }
 
+if ( ! defined( 'ABW_NO_JOB_PERIOD' ) ) {
+	define( 'ABW_NO_JOB_PERIOD', 0 );
+}
+
 if ( ! defined( 'ABW_TIMELIMIT' ) ) {
-	define( 'ABW_TIMELIMIT', 60 );
+	define( 'ABW_TIMELIMIT', 300 );
 }
 
 if ( ! defined( 'ABW_DEBUG' ) ) {
@@ -181,6 +185,14 @@ function async_background_worker_execute_job( $queue = ABW_QUEUE_NAME ) {
 	if ( ! $job ) {
 		$wpdb->query("UNLOCK TABLES");
 		async_background_worker_debug( 'No job available..' );
+
+		if( ABW_NO_JOB_PERIOD >= 1 ) {
+			async_background_worker_debug( 'BG Worker put to Sleep' );
+			for ($i=0; $i < ABW_NO_JOB_PERIOD ; $i++) { 
+				async_background_worker_debug( '.' );
+			}
+		}
+
 		return;
 	}
 
