@@ -45,8 +45,16 @@ Run WordPress Background Worker in loop (contiously) without restart the WordPre
 
 ## Production Mode
 
-1. Install supervisord on your server
-2. Put this config on the supervisord `/etc/supervisor/conf.d/wp_worker.conf` :
+1. Adjust `wp-config` constant
+    ```
+    // define how long the worker will sleep (in second) if no job if available, usefull to reduce cpu consumption
+    define('ABW_NO_JOB_PERIOD', 60);
+    
+    // define how long sleep each worker will spawn (in micro second), default is 0.75 second
+    define( 'ABW_SLEEP', 750000 );
+    ```
+2. Install supervisord on your server
+3. Put this config on the supervisord `/etc/supervisor/conf.d/wp_worker.conf` :
     ```
     [program:wp_worker]
     # Add --allow-root if run as root (not recomended)
@@ -60,8 +68,10 @@ Run WordPress Background Worker in loop (contiously) without restart the WordPre
     autostart=true
     autorestart=true
     ```
-3. Run `supervisorctl reread` and `supervisorctl update`
-4. Make sure your worker running by run `supervisorctl`
+4. Run `supervisorctl reread` and `supervisorctl update`
+5. Make sure your worker running by run `supervisorctl`
+
+
 
 ## WP Config Variable
 
