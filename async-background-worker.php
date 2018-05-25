@@ -190,6 +190,7 @@ function async_background_worker_execute_job( $queue = ABW_QUEUE_NAME ) {
 			async_background_worker_debug( 'BG Worker put to Sleep' );
 			for ($i=0; $i < ABW_NO_JOB_PERIOD ; $i++) { 
 				async_background_worker_debug( '.' );
+				sleep(1);
 			}
 		}
 
