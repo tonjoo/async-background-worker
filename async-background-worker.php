@@ -347,7 +347,7 @@ WP_CLI::add_command( 'background-worker', $background_worker_cmd );
 
 function async_background_worker_debug( $msg ) {
 
-	if ( WP_BG_WORKER_DEBUG ) {
+	if ( ABW_DEBUG ) {
 		WP_CLI::log( $msg );
 	}
 }
