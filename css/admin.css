@@ -141,6 +141,20 @@
 	margin: 0;
 }
 
+#bg-worker-jobs-queue td {
+	max-width: 150px;
+}
+
+#bg-worker-jobs-queue .created_datetime {
+	width: 125px;
+	font-weight: bold;
+}
+
+#bg-worker-jobs-queue .arguments pre {
+	white-space: pre-wrap;
+	word-break:  break-word;
+}
+
 #background-worker ul.tabs {
 	margin: 0px;
 	padding: 0px;
