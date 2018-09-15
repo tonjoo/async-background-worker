@@ -164,89 +164,6 @@ function wp_background_add_job( $job, $queue = ABW_QUEUE_NAME ) {
 	add_async_job( $job, $queue );
 }
 
-function async_background_worker_execute_job( $queue = ABW_QUEUE_NAME ) {
-	global $wpdb;
-
-	$table_name = $wpdb->prefix . ABW_DB_NAME;
-
-	$wpdb->query('LOCK TABLES '.$table_name.' WRITE');
-
-	$job = $wpdb->get_row( $wpdb->prepare( 
-		"
-		SELECT * FROM $table_name WHERE attempts <= %d AND queue=%s ORDER BY id ASC 
-		", array( 2, $queue ) 
-	) );
-
-	if( !$job ) {
-		$job = $wpdb->get_row( 'SELECT * FROM ' . $wpdb->prefix . ABW_DB_NAME . " WHERE attempts <= 2 AND queue='$queue' ORDER BY id ASC" );
-	}
-
-	// No Job
-	if ( ! $job ) {
-		$wpdb->query("UNLOCK TABLES");
-		async_background_worker_debug( 'No job available..' );
-
-		if( ABW_NO_JOB_PERIOD >= 1 ) {
-			async_background_worker_debug( 'BG Worker put to Sleep' );
-			for ($i=0; $i < ABW_NO_JOB_PERIOD ; $i++) { 
-				async_background_worker_debug( '.' );
-				sleep(1);
-			}
-		}
-
-		return;
-	}
-
-	$job_data = unserialize( @$job->payload );
-
-	if ( ! $job_data ) {
-
-		async_background_worker_debug("Delete malformated job..");
-
-		$wpdb->delete( 
-			$table_name, 
-			array( 'id' => $job->id ), 
-			array( '%d' ) 
-		);
-
-		$wpdb->query("UNLOCK TABLES");
-
-		return;
-	}
-
-	async_background_worker_debug( "Working on job ID = {$job->id}" );
-
-	$wpdb->update( 
-		$table_name, 
-		array( 
-			'attempts' => (int) $job->attempts + 1 
-		), 
-		array( 'id' => $job->id ) 
-	);
-
-	$wpdb->query("UNLOCK TABLES");
-
-	try { 
-		$function = $job_data->function;
-		$data = is_null( $job_data->user_data ) ? false : $job_data->user_data;
-
-		if ( is_callable( $function ) ) {
-			$function($data);
-		} else {
-			call_user_func_array( $function, $data );
-		}
-
-		// delete data
-		$wpdb->delete( 
-			$table_name, 
-			array( 'id' => $job->id ), 
-			array( '%d' ) 
-		);
-	} catch (Exception $e) { 
-		 WP_CLI::error( "Caught exception: ".$e->getMessage() );
-	} 
-}
-
 /**
  * Run background worker listener.
  *
@@ -254,106 +171,249 @@ function async_background_worker_execute_job( $queue = ABW_QUEUE_NAME ) {
  * listen-loop = Running the listener in daemon mode, WordPress is not reboot after each job execution
  */
 
-$background_worker_cmd = function( $args = array() ) {
+$background_worker_cmd = function( $args = array() ,$assoc_args = array()) {
 
-	if ( ( isset( $args[0] ) && 'listen' === $args[0] ) ) { 
-		$listen = true;
-	} else { 
-		$listen = false;
-	} 
+	$async_worker = new Async_Background_Worker($args,$assoc_args);
 
-	if ( $listen && ! function_exists( 'exec' ) ) {
-		async_background_worker_debug( 'Cannot run WordPress background worker on `listen` mode, please use `listen-loop` instead' );
-	}
+	$async_worker->run();
 
-	if ( isset( $args[0] ) && 'listen-loop' === $args[0] ) { 
-		$listen_loop = true;
-	} else { 
-		$listen_loop = false;
-	} 
-
-	if ( ! $listen && ! $listen_loop ) {
-		if ( function_exists( 'set_time_limit' ) ) {
-			 set_time_limit( ABW_TIMELIMIT );
-		} elseif ( function_exists( 'ini_set' ) ) {
-			ini_set( 'max_execution_time', ABW_TIMELIMIT );
-		}
-	}
-
-	// listen-loop mode
-	// @todo max execution time on listen_loop
-	if ( $listen_loop ) { 
-		while ( true ) { 
-			async_background_worker_check_memory();
-
-			usleep( ABW_SLEEP );
-			async_background_worker_execute_job();
-		} 
-	} elseif ( $listen ) {
-		// start daemon
-		while ( true ) {
-
-			$output = array();
-
-			async_background_worker_check_memory();
-			$args = array();
-
-			usleep( ABW_SLEEP );
-			async_background_worker_debug( 'Spawn next worker' );
-
-			$_ = $_SERVER['argv'][0]; // or full path to php binary
-
-			array_unshift( $args, 'background-worker' );
-
-			if ( function_exists( 'posix_geteuid' ) && posix_geteuid() == 0 && ! in_array( '--allow-root', $args ) ) {
-				array_unshift( $args, '--allow-root' );
-			}
-
-			$args = implode( ' ', $args );
-			$cmd = $_ . ' ' . $args . ' 2>&1';
-
-			exec( $cmd ,$output );
-
-			foreach ( $output as $echo ) {
-				WP_CLI::log( $echo );
-			}
-
-			async_background_worker_output_buffer_check();
-
-		}
-	} else {
-		async_background_worker_execute_job();
-	}
-
-	async_background_worker_output_buffer_check();
-	exit();
 };
 
-function async_background_worker_check_memory() {
+class Async_Background_Worker {
 
-	if ( ABW_DEBUG ) {
-		$usage = memory_get_usage() / 1024 / 1024;
+	private $args;
+	private $assoc_args;
+	private $name;
 
-		async_background_worker_debug( 'Memory Usage : ' . round( $usage, 2 ) . 'MB' );
+	function __construct($args = array(), $assoc_args = array()) {
+		$this->args = $args;
+		$this->assoc_args = $assoc_args;
+
+		// set name
+		if(isset($assoc_args['name']) && $assoc_args['name']) {
+			$this->name = $assoc_args['name'];
+		}
+		else {
+			$this->name = "Async Worker #".getmypid();
+		}
 	}
 
-	if ( ( memory_get_usage() / 1024 / 1024) >= WP_MEMORY_LIMIT ) { 
-		WP_CLI::log( 'Memory limit execeed' );
+	function run() {
+
+		if ( ( isset( $this->args[0] ) && 'listen' === $this->args[0] ) ) { 
+			$listen = true;
+		} else { 
+			$listen = false;
+		} 
+
+		if ( $listen && ! function_exists( 'exec' ) ) {
+			$this->debug( 'Cannot run WordPress background worker on `listen` mode, please use `listen-loop` instead' );
+		}
+
+		$this->debug( 'Async Background Worker : Start' );
+
+		if ( isset( $this->args[0] ) && 'listen-loop' === $this->args[0] ) { 
+			$listen_loop = true;
+		} else { 
+			$listen_loop = false;
+		} 
+
+		if( $listen_loop ) {
+			$this->set_timelimit(-1);	
+		}
+		else {
+			$this->set_timelimit();	
+		}
+
+		// listen-loop mode
+		// @todo max execution time on listen_loop
+		if ( $listen_loop ) { 
+
+
+			$this->debug( 'Async Background Worker : Mode Listen Loop' );
+			while ( true ) { 
+				$this->check_memory();
+
+				usleep( ABW_SLEEP );
+				$this->execute_job();
+			} 
+		} elseif ( $listen ) {
+			$this->debug( 'Async Background Worker : Mode Listen' );
+			// start daemon
+			while ( true ) {
+
+				$output = array();
+
+				$this->check_memory();
+				$args = array();
+
+				usleep( ABW_SLEEP );
+				$this->debug( 'Spawn next worker' );
+
+				$_ = $_SERVER['argv'][0]; // or full path to php binary
+
+				array_unshift( $args, 'background-worker' );
+
+				if ( function_exists( 'posix_geteuid' ) && posix_geteuid() == 0 && ! in_array( '--allow-root', $args ) ) {
+					array_unshift( $args, '--allow-root' );
+				}
+
+				$args = implode( ' ', $args );
+				$cmd = $_ . ' ' . $args . ' 2>&1';
+
+				exec( $cmd ,$output );
+
+				foreach ( $output as $echo ) {
+					WP_CLI::log( $echo );
+				}
+
+				$this->output_buffer_check();
+
+			}
+		} else {
+			$this->execute_job();
+		}
+
+		$this->debug( 'Async Background Worker : End' );
+
+		$this->output_buffer_check();
 		exit();
 	}
+
+	function check_memory() {
+
+		if ( ABW_DEBUG ) {
+			$usage = memory_get_usage() / 1024 / 1024;
+
+			$this->debug( 'Memory Usage : ' . round( $usage, 2 ) . 'M of maximum : '.WP_MEMORY_LIMIT );
+		}
+
+		// Assume that each proccess take 50 M
+		if ( ( memory_get_usage() / 1024 / 1024) - 50 >= WP_MEMORY_LIMIT ) { 
+			WP_CLI::log( 'Memory limit execeed' );
+			exit();
+		}
+	}
+
+	function debug( $msg ) {
+
+		if ( ABW_DEBUG ) {
+			WP_CLI::log( $this->name." : ".$msg );
+		}
+	}
+
+	function output_buffer_check() {
+
+		@ob_flush();
+		@flush();
+	}
+
+
+	function set_timelimit( $timelimit = false) {
+
+		$timelimit_set = false;
+
+		if ( $timelimit == false ) {
+			$timelimit = ABW_TIMELIMIT;
+		}
+
+		if ( function_exists( 'set_time_limit' ) ) {
+			set_time_limit( $timelimit );
+			$timelimit_set = true;
+		} elseif ( function_exists( 'ini_set' ) ) {
+			ini_set( 'max_execution_time', $timelimit );
+			$timelimit_set = true;
+		}
+
+		if( $timelimit_set == true ) {
+			$this->debug( 'Set Timelimit to : ' .$timelimit );
+		}
+
+	}
+
+	function execute_job( $queue = ABW_QUEUE_NAME ) {
+		global $wpdb;
+
+		$table_name = $wpdb->prefix . ABW_DB_NAME;
+
+		$wpdb->query('LOCK TABLES '.$table_name.' WRITE');
+
+		$job = $wpdb->get_row( $wpdb->prepare( 
+			"
+			SELECT * FROM $table_name WHERE attempts <= %d AND queue=%s ORDER BY id ASC 
+			", array( 2, $queue ) 
+		) );
+
+		if( !$job ) {
+			$job = $wpdb->get_row( 'SELECT * FROM ' . $wpdb->prefix . ABW_DB_NAME . " WHERE attempts <= 2 AND queue='$queue' ORDER BY id ASC" );
+		}
+
+		// No Job
+		if ( ! $job ) {
+			$wpdb->query("UNLOCK TABLES");
+			$this->debug( 'No job available..' );
+
+			if( ABW_NO_JOB_PERIOD >= 1 ) {
+				$this->debug( 'BG Worker put to Sleep' );
+				for ($i=0; $i < ABW_NO_JOB_PERIOD ; $i++) { 
+					$this->debug( '.' );
+					sleep(1);
+				}
+			}
+
+			return;
+		}
+
+		$job_data = unserialize( @$job->payload );
+
+		if ( ! $job_data ) {
+
+			$this->debug("Delete malformated job..");
+
+			$wpdb->delete( 
+				$table_name, 
+				array( 'id' => $job->id ), 
+				array( '%d' ) 
+			);
+
+			$wpdb->query("UNLOCK TABLES");
+
+			return;
+		}
+
+		$this->debug( "Working on job ID = {$job->id}" );
+
+		$wpdb->update( 
+			$table_name, 
+			array( 
+				'attempts' => (int) $job->attempts + 1 
+			), 
+			array( 'id' => $job->id ) 
+		);
+
+		$wpdb->query("UNLOCK TABLES");
+
+		try { 
+			$function = $job_data->function;
+			$data = is_null( $job_data->user_data ) ? false : $job_data->user_data;
+
+			if ( is_callable( $function ) ) {
+				$function($data);
+			} else {
+				call_user_func_array( $function, $data );
+			}
+
+			// delete data
+			$wpdb->delete( 
+				$table_name, 
+				array( 'id' => $job->id ), 
+				array( '%d' ) 
+			);
+		} catch (Exception $e) { 
+			 WP_CLI::error( "Caught exception: ".$e->getMessage() );
+		} 
+	}
+
 }
 
 WP_CLI::add_command( 'background-worker', $background_worker_cmd );
-
-function async_background_worker_debug( $msg ) {
-
-	if ( ABW_DEBUG ) {
-		WP_CLI::log( $msg );
-	}
-}
-
-function async_background_worker_output_buffer_check() {
-
-	@ob_flush();
-	@flush();
-}
