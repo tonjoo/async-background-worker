@@ -29,7 +29,7 @@ Make sure you have WP CLI installed on your system
         echo "Background job executed successfully\n";
     }
     ```
-3. Run `wp background-worker listen` or `wp background-worker --queue_name="special_queue"` to run your special queue
+3. Run `wp background-worker listen` or `wp background-worker --queue_name="special_queue"` to run your special queue.
 
 ## Command
 
@@ -43,7 +43,7 @@ Run WordPress Background Worker in loop (contiously), this is what you want for 
 
 ###  `wp background-worker --queue_name="special_queue"`
 
-Run background worker on specified queue name
+Run background worker on specified queue name.
 
 ###  `wp background-worker --name="worker name"`
 
@@ -53,6 +53,10 @@ Give your background worker unique name for identifier (if you run multiple work
 ###  `wp background-worker listen-loop`
 
 Run WordPress Background Worker in loop (contiously) without restart the WordPress framework. **NOTE** if you use this mode, any code change will not be reflected. You must restart the Wordpress Background Worker each time you change code. This save memory and speed up thing. 
+
+###  `wp background-worker skip-lock`
+
+Skip table locking when checkin for new job.
 
 ## Production Mode
 

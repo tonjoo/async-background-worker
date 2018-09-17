@@ -204,6 +204,15 @@ class Async_Background_Worker {
 		else {
 			$this->queue_name = ABW_QUEUE_NAME;			
 		}
+
+
+		// skip table lock 
+		if(isset($args['skip_lock']) && $args['skip_lock']) {
+			$this->skip_lock = true;
+		}
+		else {
+			$this->skip_lock = false;			
+		}
 	}
 
 	function run() {
@@ -344,13 +353,15 @@ class Async_Background_Worker {
 
 		$table_name = $wpdb->prefix . ABW_DB_NAME;
 
-		$this->debug("Aquire table lock");
+		if( !$this->skip_lock ) {
 
-		$lock =  $wpdb->get_row('LOCK TABLES '.$table_name.' WRITE');
-
-		$this->debug("Lock Aquired");
-		
-
+			$this->debug("Aquire table lock");
+			$lock =  $wpdb->get_row('LOCK TABLES '.$table_name.' WRITE');
+			$this->debug("Lock Aquired");
+		}
+		else {
+			$this->debug("Skip Aquire table lock")
+		}
 
 		$job = $wpdb->get_row( $wpdb->prepare( 
 			"SELECT * FROM $table_name WHERE attempts <= %d AND queue=%s ORDER BY id ASC", array( 0, $this->queue_name ) 
@@ -364,8 +375,10 @@ class Async_Background_Worker {
 
 		// No Job
 		if ( ! $job ) {
-			$wpdb->query("UNLOCK TABLES");
-			$this->debug("Unlock Tables");
+			if( !$this->skip_lock ) {
+				$wpdb->query("UNLOCK TABLES");
+				$this->debug("Unlock Tables");
+			}
 			$this->debug("No job available.." );
 
 			if( ABW_NO_JOB_PERIOD >= 1 ) {
@@ -391,8 +404,10 @@ class Async_Background_Worker {
 				array( '%d' ) 
 			);
 
-			$wpdb->query("UNLOCK TABLES");
-			$this->debug("Unlock Tables");
+			if( !$this->skip_lock ) {
+				$wpdb->query("UNLOCK TABLES");
+				$this->debug("Unlock Tables");
+			}
 			return;
 		}
 
@@ -406,8 +421,10 @@ class Async_Background_Worker {
 			array( 'id' => $job->id ) 
 		);
 
-		$wpdb->query("UNLOCK TABLES");
-		$this->debug("Unlock Tables");
+		if( !$this->skip_lock ) {
+			$wpdb->query("UNLOCK TABLES");
+			$this->debug("Unlock Tables");
+		}
 
 		try { 
 			$function = $job_data->function;
