@@ -360,7 +360,7 @@ class Async_Background_Worker {
 			$this->debug("Lock Aquired");
 		}
 		else {
-			$this->debug("Skip Aquire table lock")
+			$this->debug("Skip Aquire table lock");
 		}
 
 		$job = $wpdb->get_row( $wpdb->prepare( 
