@@ -18,6 +18,9 @@ Make sure you have WP CLI installed on your system
     $job->user_data = array('data'=>'some_data');
     
     add_async_job($job);
+
+    // You can also assign to special queue if you want
+    add_async_job($job,'special_queue');
     ```
 2. Implement function 
     ```
@@ -26,7 +29,7 @@ Make sure you have WP CLI installed on your system
         echo "Background job executed successfully\n";
     }
     ```
-3. Run `wp background-worker listen`
+3. Run `wp background-worker listen` or `wp background-worker --queue_name="special_queue"` to run your special queue
 
 ## Command
 
