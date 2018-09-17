@@ -38,6 +38,14 @@ Run WordPress Background Worker once.
 
 Run WordPress Background Worker in loop (contiously), this is what you want for background worker. WordPress framework is restart in each loop.
 
+###  `wp background-worker --queue_name="special_queue"`
+
+Run background worker on specified queue name
+
+###  `wp background-worker --name="worker name"`
+
+Give your background worker unique name for identifier (if you run multiple worker this is quite handy). If not set the worker name will be its PID
+
 
 ###  `wp background-worker listen-loop`
 
@@ -45,9 +53,9 @@ Run WordPress Background Worker in loop (contiously) without restart the WordPre
 
 ## Production Mode
 
-1. Adjust `wp-config` constant
+1. Adjust `wp-config` constant if needed
     ```
-    // define how long the worker will sleep (in second) if no job if available, usefull to reduce cpu consumption
+    // define how long the worker will sleep (in second) if no job if available, usefull to reduce cpu consumption on shared VPS or non dedicated worker instance
     define('ABW_NO_JOB_PERIOD', 60);
     
     // define how long sleep each worker will spawn (in micro second), default is 0.75 second

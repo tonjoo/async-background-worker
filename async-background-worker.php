@@ -196,6 +196,14 @@ class Async_Background_Worker {
 		else {
 			$this->name = "Async Worker #".getmypid();
 		}
+
+		// set queue name 
+		if(isset($assoc_args['queue_name']) && $assoc_args['queue_name']) {
+			$this->queue_name = $assoc_args['queue_name'];
+		}
+		else {
+			$this->queue_name = ABW_QUEUE_NAME;			
+		}
 	}
 
 	function run() {
@@ -210,7 +218,7 @@ class Async_Background_Worker {
 			$this->debug( 'Cannot run WordPress background worker on `listen` mode, please use `listen-loop` instead' );
 		}
 
-		$this->debug( 'Async Background Worker : Start' );
+		$this->debug( 'Async Background Worker : Start working on queue : '.$this->queue_name );
 
 		if ( isset( $this->args[0] ) && 'listen-loop' === $this->args[0] ) { 
 			$listen_loop = true;
@@ -298,7 +306,7 @@ class Async_Background_Worker {
 	function debug( $msg ) {
 
 		if ( ABW_DEBUG ) {
-			WP_CLI::log( $this->name." : ".$msg );
+			WP_CLI::log( $this->name." (".$this->queue_name.") : ".$msg );
 		}
 	}
 
@@ -331,27 +339,34 @@ class Async_Background_Worker {
 
 	}
 
-	function execute_job( $queue = ABW_QUEUE_NAME ) {
+	function execute_job() {
 		global $wpdb;
 
 		$table_name = $wpdb->prefix . ABW_DB_NAME;
 
-		$wpdb->query('LOCK TABLES '.$table_name.' WRITE');
+		$this->debug("Aquire table lock");
+
+		$lock =  $wpdb->get_row('LOCK TABLES '.$table_name.' WRITE');
+
+		$this->debug("Lock Aquired");
+		
+
 
 		$job = $wpdb->get_row( $wpdb->prepare( 
-			"
-			SELECT * FROM $table_name WHERE attempts <= %d AND queue=%s ORDER BY id ASC 
-			", array( 2, $queue ) 
+			"SELECT * FROM $table_name WHERE attempts <= %d AND queue=%s ORDER BY id ASC", array( 0, $this->queue_name ) 
 		) );
 
 		if( !$job ) {
-			$job = $wpdb->get_row( 'SELECT * FROM ' . $wpdb->prefix . ABW_DB_NAME . " WHERE attempts <= 2 AND queue='$queue' ORDER BY id ASC" );
+			$job = 	$job = $wpdb->get_row( $wpdb->prepare( 
+						"SELECT * FROM $table_name WHERE attempts <= %d AND queue=%s ORDER BY id ASC", array( 2, $this->queue_name ) 
+					) );
 		}
 
 		// No Job
 		if ( ! $job ) {
 			$wpdb->query("UNLOCK TABLES");
-			$this->debug( 'No job available..' );
+			$this->debug("Unlock Tables");
+			$this->debug("No job available.." );
 
 			if( ABW_NO_JOB_PERIOD >= 1 ) {
 				$this->debug( 'BG Worker put to Sleep' );
@@ -377,7 +392,7 @@ class Async_Background_Worker {
 			);
 
 			$wpdb->query("UNLOCK TABLES");
-
+			$this->debug("Unlock Tables");
 			return;
 		}
 
@@ -392,6 +407,7 @@ class Async_Background_Worker {
 		);
 
 		$wpdb->query("UNLOCK TABLES");
+		$this->debug("Unlock Tables");
 
 		try { 
 			$function = $job_data->function;
