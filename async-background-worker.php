@@ -32,7 +32,7 @@ define( 'ABW_DB_VERSION', 15 );
 define( 'ABW_DB_NAME', 'bg_jobs' );
 
 if ( ! defined( 'ABW_SLEEP' ) ) {
-	define( 'ABW_SLEEP', 750000 );
+	define( 'ABW_SLEEP', 10000 );
 }
 
 if ( ! defined( 'ABW_NO_JOB_PERIOD' ) ) {
@@ -184,6 +184,9 @@ class Async_Background_Worker {
 	private $args;
 	private $assoc_args;
 	private $name;
+	private $skip_lock;
+	private $listen;
+	private $listen_loop;
 
 	function __construct($args = array(), $assoc_args = array()) {
 		$this->args = $args;
@@ -205,37 +208,22 @@ class Async_Background_Worker {
 			$this->queue_name = ABW_QUEUE_NAME;			
 		}
 
+		$this->skip_lock = in_array('skip-lock',$args) ? true : false;
+		$this->listen = in_array('listen',$args) ? true : false;
+		$this->listen_loop = in_array('listen-loop',$args) ? true : false;
 
-		// skip table lock 
-		if(isset($args['skip_lock']) && $args['skip_lock']) {
-			$this->skip_lock = true;
-		}
-		else {
-			$this->skip_lock = false;			
-		}
+
 	}
 
 	function run() {
 
-		if ( ( isset( $this->args[0] ) && 'listen' === $this->args[0] ) ) { 
-			$listen = true;
-		} else { 
-			$listen = false;
-		} 
-
-		if ( $listen && ! function_exists( 'exec' ) ) {
+		if ( $this->listen && ! function_exists( 'exec' ) ) {
 			$this->debug( 'Cannot run WordPress background worker on `listen` mode, please use `listen-loop` instead' );
 		}
 
 		$this->debug( 'Async Background Worker : Start working on queue : '.$this->queue_name );
 
-		if ( isset( $this->args[0] ) && 'listen-loop' === $this->args[0] ) { 
-			$listen_loop = true;
-		} else { 
-			$listen_loop = false;
-		} 
-
-		if( $listen_loop ) {
+		if( $this->listen_loop ) {
 			$this->set_timelimit(-1);	
 		}
 		else {
@@ -244,7 +232,7 @@ class Async_Background_Worker {
 
 		// listen-loop mode
 		// @todo max execution time on listen_loop
-		if ( $listen_loop ) { 
+		if ( $this->listen_loop ) { 
 
 
 			$this->debug( 'Async Background Worker : Mode Listen Loop' );
@@ -254,29 +242,49 @@ class Async_Background_Worker {
 				usleep( ABW_SLEEP );
 				$this->execute_job();
 			} 
-		} elseif ( $listen ) {
+		} elseif ( $this->listen ) {
 			$this->debug( 'Async Background Worker : Mode Listen' );
 			// start daemon
 			while ( true ) {
 
-				$output = array();
-
-				$this->check_memory();
-				$args = array();
-
+				$this->debug( 'Spawn worker' );
 				usleep( ABW_SLEEP );
-				$this->debug( 'Spawn next worker' );
+				$this->check_memory();
+
+				// output buffer
+				$output = array();
+	
+				// process $args			
+				$args = $this->args;
+
+				// remove $args listen and listen-loop
+				$args = array_diff($args, ['listen'] );
+				$args = array_diff($args, ['listen-loop'] );
+
+				// add background worker command
+				array_unshift( $args, 'background-worker' );
+
+				// process $assoc_args
+				$assoc_args = $this->assoc_args;
+
+				foreach($assoc_args as $param => $value) {
+				   $paramsJoined[] = "--$param='$value'";
+				}
+
+				$assoc_args = implode(' ', $paramsJoined);
 
 				$_ = $_SERVER['argv'][0]; // or full path to php binary
-
-				array_unshift( $args, 'background-worker' );
 
 				if ( function_exists( 'posix_geteuid' ) && posix_geteuid() == 0 && ! in_array( '--allow-root', $args ) ) {
 					array_unshift( $args, '--allow-root' );
 				}
 
 				$args = implode( ' ', $args );
+				$args = $args.' '.$assoc_args;
 				$cmd = $_ . ' ' . $args . ' 2>&1';
+
+				$this->debug( 'Command '.$cmd );
+				die();
 
 				exec( $cmd ,$output );
 
