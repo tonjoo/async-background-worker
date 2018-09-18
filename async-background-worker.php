@@ -184,7 +184,6 @@ class Async_Background_Worker {
 	private $args;
 	private $assoc_args;
 	private $name;
-	private $skip_lock;
 	private $listen;
 	private $listen_loop;
 
@@ -208,7 +207,6 @@ class Async_Background_Worker {
 			$this->queue_name = ABW_QUEUE_NAME;			
 		}
 
-		$this->skip_lock = in_array('skip-lock',$args) ? true : false;
 		$this->listen = in_array('listen',$args) ? true : false;
 		$this->listen_loop = in_array('listen-loop',$args) ? true : false;
 
@@ -271,8 +269,6 @@ class Async_Background_Worker {
 				   $paramsJoined[] = "--$param='$value'";
 				}
 
-				$assoc_args = implode(' ', $paramsJoined);
-
 				$_ = $_SERVER['argv'][0]; // or full path to php binary
 
 				if ( function_exists( 'posix_geteuid' ) && posix_geteuid() == 0 && ! in_array( '--allow-root', $args ) ) {
@@ -280,11 +276,12 @@ class Async_Background_Worker {
 				}
 
 				$args = implode( ' ', $args );
-				$args = $args.' '.$assoc_args;
+				if( sizeof($assoc_args) != 0 ) {
+					$args = $args.' '.$assoc_args;
+				}
 				$cmd = $_ . ' ' . $args . ' 2>&1';
 
 				$this->debug( 'Command '.$cmd );
-				die();
 
 				exec( $cmd ,$output );
 
@@ -359,34 +356,23 @@ class Async_Background_Worker {
 	function execute_job() {
 		global $wpdb;
 
+		$wpdb->query('START TRANSACTION');
+
 		$table_name = $wpdb->prefix . ABW_DB_NAME;
 
-		if( !$this->skip_lock ) {
-
-			$this->debug("Aquire table lock");
-			$lock =  $wpdb->get_row('LOCK TABLES '.$table_name.' WRITE');
-			$this->debug("Lock Aquired");
-		}
-		else {
-			$this->debug("Skip Aquire table lock");
-		}
-
 		$job = $wpdb->get_row( $wpdb->prepare( 
-			"SELECT * FROM $table_name WHERE attempts <= %d AND queue=%s ORDER BY id ASC", array( 0, $this->queue_name ) 
+			"SELECT * FROM $table_name WHERE attempts <= %d AND queue=%s ORDER BY id ASC for update", array( 0, $this->queue_name ) 
 		) );
 
 		if( !$job ) {
 			$job = 	$job = $wpdb->get_row( $wpdb->prepare( 
-						"SELECT * FROM $table_name WHERE attempts <= %d AND queue=%s ORDER BY id ASC", array( 2, $this->queue_name ) 
-					) );
+						"SELECT * FROM $table_name WHERE attempts <= %d AND queue=%s ORDER BY id ASC for update", array( 2, $this->queue_name ) 
+							) );
 		}
 
 		// No Job
 		if ( ! $job ) {
-			if( !$this->skip_lock ) {
-				$wpdb->query("UNLOCK TABLES");
-				$this->debug("Unlock Tables");
-			}
+			$wpdb->query('COMMIT');
 			$this->debug("No job available.." );
 
 			if( ABW_NO_JOB_PERIOD >= 1 ) {
@@ -411,11 +397,8 @@ class Async_Background_Worker {
 				array( 'id' => $job->id ), 
 				array( '%d' ) 
 			);
+			$wpdb->query('COMMIT');
 
-			if( !$this->skip_lock ) {
-				$wpdb->query("UNLOCK TABLES");
-				$this->debug("Unlock Tables");
-			}
 			return;
 		}
 
@@ -429,10 +412,7 @@ class Async_Background_Worker {
 			array( 'id' => $job->id ) 
 		);
 
-		if( !$this->skip_lock ) {
-			$wpdb->query("UNLOCK TABLES");
-			$this->debug("Unlock Tables");
-		}
+		$wpdb->query('COMMIT');
 
 		try { 
 			$function = $job_data->function;
