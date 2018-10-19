@@ -65,8 +65,8 @@ Skip table locking when checkin for new job.
     // define how long the worker will sleep (in second) if no job if available, usefull to reduce cpu consumption on shared VPS or non dedicated worker instance
     define('ABW_NO_JOB_PERIOD', 60);
     
-    // define how long sleep each worker will spawn (in micro second), default is 0.75 second
-    define( 'ABW_SLEEP', 750000 );
+    // define how long sleep each worker will spawn (in micro second), default is 0.2 second
+    define( 'ABW_SLEEP', 200000 );
     ```
 2. Install supervisord on your server
 3. Put this config on the supervisord `/etc/supervisor/conf.d/wp_worker.conf` :
