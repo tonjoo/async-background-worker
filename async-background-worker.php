@@ -188,6 +188,7 @@ class Async_Background_Worker {
 	private $listen_loop;
 
 	function __construct($args = array(), $assoc_args = array()) {
+		
 		$this->args = $args;
 		$this->assoc_args = $assoc_args;
 
@@ -354,6 +355,16 @@ class Async_Background_Worker {
 	}
 
 	function execute_job() {
+		
+		// re-init wp_monolog.
+		define( 'DOING_BG_WORKER', true );
+		if ( function_exists('wp_monolog') ) {
+			if ( isset( $GLOBALS['wp_monolog'] ) ) {
+				unset( $GLOBALS['wp_monolog'] );
+			}
+			wp_monolog();
+		}
+
 		global $wpdb;
 
 		$wpdb->query('START TRANSACTION');
@@ -414,7 +425,8 @@ class Async_Background_Worker {
 
 		$wpdb->query('COMMIT');
 
-		try { 
+		try {
+
 			$function = $job_data->function;
 			$data = is_null( $job_data->user_data ) ? false : $job_data->user_data;
 
