@@ -76,12 +76,16 @@ if ( $installed_version < ABW_DB_VERSION ) {
 		$wpdb->query( $sql );
 	}
 
-	// Change storage engine to InnoDB.
 	if ( $installed_version <= 15 ) {
 		global $wpdb;
 
 		$db_name = $wpdb->prefix . ABW_DB_NAME;
 
+		// Add updated_datetime field.
+		$sql = "ALTER TABLE {$db_name} ADD `updated_datetime` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,";
+		$wpdb->query( $sql );
+
+		// Change storage engine to InnoDB.
 		$sql = "ALTER TABLE {$db_name} ENGINE=InnoDB;";
 		$wpdb->query( $sql );
 	}
@@ -103,7 +107,7 @@ function async_background_worker_install_db() {
 				  `queue` varchar(255) NOT NULL,
 				  `payload` longtext NOT NULL,
 				  `attempts` tinyint(4) UNSIGNED NOT NULL,
-					`created_datetime` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				  `created_datetime` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				  PRIMARY KEY  (`id`)
 			  ) ENGINE=InnoDB $charset_collate;";
 
@@ -385,9 +389,9 @@ class Async_Background_Worker {
 		) );
 
 		if( !$job ) {
-			$job = 	$job = $wpdb->get_row( $wpdb->prepare( 
-						"SELECT * FROM $table_name WHERE attempts <= %d AND queue=%s ORDER BY id ASC for update", array( 2, $this->queue_name ) 
-							) );
+			$job = $job = $wpdb->get_row( $wpdb->prepare( 
+				"SELECT * FROM $table_name WHERE attempts <= %d AND queue=%s AND updated_datetime < DATE_SUB(NOW(), INTERVAL 30 MINUTE) ORDER BY id ASC for update", array( 2, $this->queue_name )
+			) );
 		}
 
 		// No Job
