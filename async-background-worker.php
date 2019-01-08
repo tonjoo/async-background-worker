@@ -28,7 +28,7 @@ require_once( plugin_dir_path( __FILE__ ) . 'admin-page.php' );
 define( 'ABW_PLUGIN_DIR', plugin_dir_url( __FILE__ ) );
 define( 'ABW_ADMIN_MENU_SLUG', 'background_worker' );
 
-define( 'ABW_DB_VERSION', 15 );
+define( 'ABW_DB_VERSION', 16 );
 define( 'ABW_DB_NAME', 'bg_jobs' );
 
 if ( ! defined( 'ABW_SLEEP' ) ) {
@@ -76,9 +76,18 @@ if ( $installed_version < ABW_DB_VERSION ) {
 		$wpdb->query( $sql );
 	}
 
+	// Change storage engine to InnoDB.
+	if ( $installed_version <= 15 ) {
+		global $wpdb;
+
+		$db_name = $wpdb->prefix . ABW_DB_NAME;
+
+		$sql = "ALTER TABLE {$db_name} ENGINE=InnoDB;";
+		$wpdb->query( $sql );
+	}
+
 	update_option( 'ABW_DB_VERSION', ABW_DB_VERSION, 'no' );
 }
-
 
 function async_background_worker_install_db() {
 	global $wpdb;
@@ -96,7 +105,7 @@ function async_background_worker_install_db() {
 				  `attempts` tinyint(4) UNSIGNED NOT NULL,
 					`created_datetime` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				  PRIMARY KEY  (`id`)
-			  ) $charset_collate;";
+			  ) ENGINE=InnoDB $charset_collate;";
 
 		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
 		dbDelta( $sql );
