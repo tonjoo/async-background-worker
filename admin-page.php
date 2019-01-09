@@ -226,7 +226,7 @@ if ( 'failed' == $status ) {
 									<td class="text-center"><?php echo $job->queue; ?></td>
 									<td class="text-center">
 										<?php
-										if ( 'failed' == $status ) {
+										if ( $job->attempts > 2 ) {
 											echo '<div class="actions">';
 											echo '<a href="#" id="" data-job-ID="' . $job->id . '" class="button btn-bw-retry-job">'.__( 'Retry Job' ).'</a>';
 											echo '<span class="spinner hide"></span>';
