@@ -28,7 +28,7 @@ require_once( plugin_dir_path( __FILE__ ) . 'admin-page.php' );
 define( 'ABW_PLUGIN_DIR', plugin_dir_url( __FILE__ ) );
 define( 'ABW_ADMIN_MENU_SLUG', 'background_worker' );
 
-define( 'ABW_DB_VERSION', 16 );
+define( 'ABW_DB_VERSION', 17 );
 define( 'ABW_DB_NAME', 'bg_jobs' );
 
 if ( ! defined( 'ABW_SLEEP' ) ) {
@@ -51,54 +51,23 @@ if ( ! defined( 'ABW_QUEUE_NAME' ) ) {
 	define( 'ABW_QUEUE_NAME', 'default' );
 }
 
-$installed_version = intval( get_option( 'ABW_DB_VERSION' ) );
-
-if ( $installed_version < ABW_DB_VERSION ) {
-	// drop and re create
-	if ( $installed_version <= 5 ) {
-		global $wpdb;
-
-		$db_name = $wpdb->prefix . 'jobs';
-
-		$sql = 'DROP TABLE ' . $db_name . ';';
-		$wpdb->query( $sql );
-
-		async_background_worker_install_db();
-	}
-
-	// drop and re create
-	if ( $installed_version <= 10 ) {
-		global $wpdb;
-
-		$db_name = $wpdb->prefix . ABW_DB_NAME;
-
-		$sql = "ALTER TABLE {$db_name} ADD `created_datetime` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `attempts`;";
-		$wpdb->query( $sql );
-	}
-
-	if ( $installed_version <= 15 ) {
-		global $wpdb;
-
-		$db_name = $wpdb->prefix . ABW_DB_NAME;
-
-		// Add updated_datetime field.
-		$sql = "ALTER TABLE {$db_name} ADD `updated_datetime` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,";
-		$wpdb->query( $sql );
-
-		// Change storage engine to InnoDB.
-		$sql = "ALTER TABLE {$db_name} ENGINE=InnoDB;";
-		$wpdb->query( $sql );
-	}
-
-	update_option( 'ABW_DB_VERSION', ABW_DB_VERSION, 'no' );
-}
-
 function async_background_worker_install_db() {
 	global $wpdb;
 
+	$installed_version = intval( get_option( 'ABW_DB_VERSION' ) );
+	if ( $installed_version < ABW_DB_VERSION ) {
+		// drop and re create.
+		if ( $installed_version <= 5 ) {
+			$db_name = $wpdb->prefix . 'jobs';
+
+			$sql = 'DROP TABLE ' . $db_name . ';';
+			$wpdb->query( $sql );
+		}
+	}
+
 	$db_name = $wpdb->prefix . ABW_DB_NAME;
 
-	// create db table
+	// create db table.
 	$charset_collate = $wpdb->get_charset_collate();
 
 	if ( $wpdb->get_var( "SHOW TABLES LIKE '$db_name'" ) != $db_name ) {
@@ -108,6 +77,7 @@ function async_background_worker_install_db() {
 				  `payload` longtext NOT NULL,
 				  `attempts` tinyint(4) UNSIGNED NOT NULL,
 				  `created_datetime` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				  `updated_datetime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 				  PRIMARY KEY  (`id`)
 			  ) ENGINE=InnoDB $charset_collate;";
 
@@ -115,11 +85,34 @@ function async_background_worker_install_db() {
 		dbDelta( $sql );
 	}
 
+	if ( $installed_version < ABW_DB_VERSION ) {
+		if ( $installed_version <= 10 ) {
+			// Add created_datetime field.
+			$field = $wpdb->get_var( "SHOW COLUMNS FROM $db_name LIKE 'created_datetime'" );
+			if ( ! $field ) {
+				$sql = "ALTER TABLE {$db_name} ADD `created_datetime` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `attempts`;";
+				$wpdb->query( $sql );
+			}
+		}
+
+		if ( $installed_version <= 16 ) {
+			// Add updated_datetime field.
+			$field = $wpdb->get_var( "SHOW COLUMNS FROM $db_name LIKE 'updated_datetime'" );
+			if ( ! $field ) {
+				$sql = "ALTER TABLE {$db_name} ADD `updated_datetime` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP";
+				$wpdb->query( $sql );
+			}
+
+			// Change storage engine to InnoDB.
+			$sql = "ALTER TABLE {$db_name} ENGINE=InnoDB;";
+			$wpdb->query( $sql );
+		}
+	}
 	update_option( 'ABW_DB_VERSION', ABW_DB_VERSION, 'no' );
 }
 
-// run the install scripts upon plugin activation
-register_activation_hook( __FILE__,'async_background_worker_install_db' );
+// run the install scripts upon plugin activation.
+register_activation_hook( __FILE__, 'async_background_worker_install_db' );
 
 /**
  * Add settings button on plugin actions
@@ -388,9 +381,9 @@ class Async_Background_Worker {
 			"SELECT * FROM $table_name WHERE attempts <= %d AND queue=%s ORDER BY id ASC for update", array( 0, $this->queue_name ) 
 		) );
 
-		if( !$job ) {
-			$job = $job = $wpdb->get_row( $wpdb->prepare( 
-				"SELECT * FROM $table_name WHERE attempts <= %d AND queue=%s AND updated_datetime < DATE_SUB(NOW(), INTERVAL 30 MINUTE) ORDER BY id ASC for update", array( 2, $this->queue_name )
+		if ( ! $job ) {
+			$job = $job = $wpdb->get_row( $wpdb->prepare(
+				"SELECT * FROM $table_name WHERE attempts <= %d AND queue=%s AND updated_datetime < DATE_SUB(NOW(), INTERVAL 30 MINUTE) ORDER BY id ASC for update", array( 2, $this->queue_name ) 
 			) );
 		}
 
