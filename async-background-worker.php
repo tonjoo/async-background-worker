@@ -339,7 +339,7 @@ class Async_Background_Worker {
 
 		$timelimit_set = false;
 
-		if ( $timelimit == false ) {
+		if ( ! $timelimit ) {
 			$timelimit = ABW_TIMELIMIT;
 		}
 
@@ -351,7 +351,7 @@ class Async_Background_Worker {
 			$timelimit_set = true;
 		}
 
-		if ( $timelimit_set == true ) {
+		if ( $timelimit_set ) {
 			$this->debug( 'Set Timelimit to : ' . $timelimit );
 		}
 

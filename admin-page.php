@@ -115,9 +115,7 @@ function background_worker_page_handler() {
 						<div class="pull-right">
 							<a href="<?php echo esc_url( add_query_arg( array( 'action' => $nonce ), $page_uri ) ); ?>" onclick="if ( ! confirm( 'Are you sure?' ) ) return false;"><?php esc_html_e( 'Clear All Jobs' ); ?></a>
 						</div>
-						<?php
-}
-?>
+					<?php } ?>
 				</div>
 
 				<table id="bg-worker-jobs-queue" class="bordered-table">
