@@ -97,8 +97,8 @@ function background_worker_page_handler() {
 		<div id="background-worker-job" class="tab-content current">
 			<div class="tab-wrapper">
 				<div class="count">
-					<span class="pull-left"><?php printf( esc_html__( 'Total Jobs: <strong>%s</strong>' ), esc_html( bw_number_format( $total_jobs ) ) ); ?></span>
-					<span class="pull-right"><?php printf( esc_html__( 'Failed Jobs: <strong>%s</strong>' ), esc_html( bw_number_format( $total_failed_jobs ) ) ); ?></span>
+					<span class="pull-left"><?php printf( wp_kses_post( 'Total Jobs: <strong>%s</strong>' ), esc_html( bw_number_format( $total_jobs ) ) ); ?></span>
+					<span class="pull-right"><?php printf( wp_kses_post( 'Failed Jobs: <strong>%s</strong>' ), esc_html( bw_number_format( $total_failed_jobs ) ) ); ?></span>
 				</div>
 
 				<div class="navigation">
