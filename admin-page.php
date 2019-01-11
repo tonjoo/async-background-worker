@@ -2,8 +2,8 @@
 
 add_action( 'admin_enqueue_scripts', 'wp_background_worker_admin_scripts' );
 function wp_background_worker_admin_scripts() {
-	wp_enqueue_style( 'bg-worker-admin-style', ABW_PLUGIN_DIR . 'css/admin.css', array(), false );
-	wp_enqueue_script( 'bg-worker-admin-js', ABW_PLUGIN_DIR . 'js/admin.js', array( 'jquery' ), '', true );
+	wp_enqueue_style( 'bg-worker-admin-style', ABW_PLUGIN_DIR . 'css/admin.css', array(), '1.0' );
+	wp_enqueue_script( 'bg-worker-admin-js', ABW_PLUGIN_DIR . 'js/admin.js', array( 'jquery' ), '1.0', true );
 }
 
 add_action( 'admin_menu', 'background_worker_menu_page' );
@@ -16,7 +16,7 @@ function background_worker_page_handler() {
 
 	$table_name = $wpdb->prefix . ABW_DB_NAME;
 
-	$page        = isset( $_GET['page'] ) ? $_GET['page'] : ABW_ADMIN_MENU_SLUG;
+	$page        = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : ABW_ADMIN_MENU_SLUG;
 	$page_uri    = add_query_arg(
 		array(
 			'page' => $page,
@@ -26,7 +26,7 @@ function background_worker_page_handler() {
 	$current_url = get_current_url();
 	$nonce       = wp_create_nonce( 'clear_background_worker_jobs' );
 	$paged       = isset( $_GET['paged'] ) ? intval( $_GET['paged'] ) : 1;
-	$status      = isset( $_GET['status'] ) ? $_GET['status'] : '';
+	$status      = isset( $_GET['status'] ) ? sanitize_key( $_GET['status'] ) : '';
 	$per_page    = 20;
 	$offset      = ( $per_page * $paged ) - $per_page;
 
@@ -36,8 +36,8 @@ function background_worker_page_handler() {
 	$total_jobs        = $wpdb->get_var( "SELECT COUNT(*) FROM ($sql) AS derived_table" );
 	$max_pages         = max( 1, ceil( $total_jobs / $per_page ) );
 
-	if ( '' != $status ) {
-		if ( 'active' == $status ) {
+	if ( '' !== $status ) {
+		if ( 'active' === $status ) {
 			$sql = $wpdb->prepare(
 				"
 				SELECT * FROM $table_name 
@@ -70,91 +70,50 @@ function background_worker_page_handler() {
 
 	?>
 	<div id="background-worker" class="wrap">
-	
-		<h1><?php _e( 'Background Worker Log' ); ?></h1>
-		
+
+		<h1><?php esc_html_e( 'Background Worker Log' ); ?></h1>
+
 		<?php
-		if ( isset( $_GET['action'] ) && wp_verify_nonce( $_GET['action'], 'clear_background_worker_jobs' ) ) {
+		if ( isset( $_GET['action'] ) && wp_verify_nonce( sanitize_key( $_GET['action'] ), 'clear_background_worker_jobs' ) ) {
 			$delete = $wpdb->query( "DELETE FROM $table_name WHERE 1" );
 
 			if ( ! is_wp_error( $delete ) ) {
-				echo '<p>' . __( 'All jobs have been cleared.' ) . '</p>';
+				echo '<p>' . esc_html__( 'All jobs have been cleared.' ) . '</p>';
 			} else {
 				echo '<p>Error : ' . $delete->get_error_message() . '</p>';
 			}
 
-			echo '<a href="' . $page_uri . '">' . __( 'Return to plugin homepage' ) . '</a>';
+			echo '<a href="' . esc_url( $page_uri ) . '">' . esc_html__( 'Return to plugin homepage' ) . '</a>';
 
 			return;
 		}
 		?>
 
 		<ul class="tabs">
-			<li class="tab-link current" data-tab="background-worker-job"><?php _e( 'Jobs' ); ?></li>
-			<li class="tab-link" data-tab="background-worker-log"><?php _e( 'Log' ); ?></li>
+			<li class="tab-link current" data-tab="background-worker-job"><?php esc_html_e( 'Jobs' ); ?></li>
+			<li class="tab-link" data-tab="background-worker-log"><?php esc_html_e( 'Log' ); ?></li>
 		</ul>
 
 		<div id="background-worker-job" class="tab-content current">
 			<div class="tab-wrapper">
 				<div class="count">
-					<span class="pull-left"><?php printf( __( 'Total Jobs: <strong>%s</strong>' ), bw_number_format( $total_jobs ) ); ?></span>
-					<span class="pull-right"><?php printf( __( 'Failed Jobs: <strong>%s</strong>' ), bw_number_format( $total_failed_jobs ) ); ?></span>
+					<span class="pull-left"><?php printf( esc_html__( 'Total Jobs: <strong>%s</strong>' ), esc_html( bw_number_format( $total_jobs ) ) ); ?></span>
+					<span class="pull-right"><?php printf( esc_html__( 'Failed Jobs: <strong>%s</strong>' ), esc_html( bw_number_format( $total_failed_jobs ) ) ); ?></span>
 				</div>
 
 				<div class="navigation">
 					<div class="pull-left">
 						<ul class="subsubsub">
-							<li><a href="<?php echo $page_uri; ?>" class="
-													<?php
-													if ( '' == $status ) {
-														echo 'current';}
-?>
-"><?php _e( 'All Jobs' ); ?></a> (<?php echo bw_number_format( $total_jobs ); ?>) | </li>
-							<li><a href="
-							<?php
-							echo add_query_arg(
-								array(
-									'status' => 'active',
-								),
-								$page_uri
-							);
-?>
-" class="
-<?php
-if ( 'active' == $status ) {
-	echo 'current';}
-?>
-"><?php _e( 'Active Jobs' ); ?></a> (<?php echo bw_number_format( $total_active_jobs ); ?>) | </li>
-							<li><a href="
-							<?php
-							echo add_query_arg(
-								array(
-									'status' => 'failed',
-								),
-								$page_uri
-							);
-?>
-" class="
-<?php
-if ( 'failed' == $status ) {
-	echo 'current';}
-?>
-"><?php _e( 'Failed Jobs' ); ?></a> (<?php echo bw_number_format( $total_failed_jobs ); ?>)</li>
+							<li><a href="<?php echo esc_url( $page_uri ); ?>" class="<?php echo ( '' === $status ) ? 'current' : ''; ?>
+								"><?php esc_html_e( 'All Jobs' ); ?></a> (<?php echo esc_html( bw_number_format( $total_jobs ) ); ?>) | </li>
+							<li><a href="<?php echo esc_url( add_query_arg( array( 'status' => 'active' ), $page_uri ) ); ?>" class="<?php echo 'active' === $status ? 'current' : ''; ?>"><?php esc_html_e( 'Active Jobs' ); ?></a> (<?php echo esc_html( bw_number_format( $total_active_jobs ) ); ?>) | </li>
+							<li><a href="<?php echo esc_url( add_query_arg( array( 'status' => 'failed' ), $page_uri ) ); ?>" class="<?php echo ( 'failed' === $status ) ? 'current' : ''; ?>"><?php esc_html_e( 'Failed Jobs' ); ?></a> (<?php echo esc_html( bw_number_format( $total_failed_jobs ) ); ?>)</li>
 						</ul>
 					</div>
-					
+
 					<?php if ( $total_jobs > 0 ) { ?>
 						<div class="pull-right">
-							<a href="
-							<?php
-							echo add_query_arg(
-								array(
-									'action' => $nonce,
-								),
-								$page_uri
-							);
-?>
-" onClick="if ( !confirm('Are you sure?') ) return false;"><?php _e( 'Clear All Jobs' ); ?></a>
+							<a href="<?php echo esc_url( add_query_arg( array( 'action' => $nonce ), $page_uri ) ); ?>" onclick="if ( ! confirm( 'Are you sure?' ) ) return false;"><?php esc_html_e( 'Clear All Jobs' ); ?></a>
 						</div>
 						<?php
 }
@@ -165,12 +124,12 @@ if ( 'failed' == $status ) {
 					<thead>
 						<tr>
 							<th scope="row" rowspan="2">#</th>
-							<th rowspan="2"><?php _e( 'ID' ); ?></th>
-							<th rowspan="2"><?php _e( 'Created Date Time' ); ?></th>
-							<th rowspan="2"><?php _e( 'Job' ); ?></th>
-							<th rowspan="2"><?php _e( 'Argument(s)' ); ?></th>
-							<th rowspan="2"><?php _e( 'Queue' ); ?></th>
-							<th rowspan="2"><?php _e( 'Attempts' ); ?></th>
+							<th rowspan="2"><?php esc_html_e( 'ID' ); ?></th>
+							<th rowspan="2"><?php esc_html_e( 'Created Date Time' ); ?></th>
+							<th rowspan="2"><?php esc_html_e( 'Job' ); ?></th>
+							<th rowspan="2"><?php esc_html_e( 'Argument(s)' ); ?></th>
+							<th rowspan="2"><?php esc_html_e( 'Queue' ); ?></th>
+							<th rowspan="2"><?php esc_html_e( 'Attempts' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -186,9 +145,9 @@ if ( 'failed' == $status ) {
 
 								?>
 								<tr>
-									<th scope="row"><?php echo $number; ?></th>
-									<th><?php echo $job->id; ?></th>
-									<td class="created_datetime text-center"><?php echo isset( $job->created_datetime ) ? $job->created_datetime : '-'; ?></td>
+									<th scope="row"><?php echo esc_html( $number ); ?></th>
+									<th><?php echo esc_html( $job->id ); ?></th>
+									<td class="created_datetime text-center"><?php echo isset( $job->created_datetime ) ? esc_html( $job->created_datetime ) : '-'; ?></td>
 									<td>
 										<?php
 											$function = $payload->function;
@@ -203,15 +162,15 @@ if ( 'failed' == $status ) {
 												$access = '::';
 											}
 
-											echo $class . $access . $function[1] . '()';
+											echo esc_html( $class . $access . $function[1] ) . '()';
 										} else {
-											echo $function . '()';
+											echo esc_html( $function ) . '()';
 										}
 										?>
 									</td>
 									<td class="arguments">
 										<?php
-											$args = $payload->user_data;
+										$args = $payload->user_data;
 
 										if ( empty( $args ) ) {
 											echo '<em>' . esc_html__( 'None' ) . '</em>';
@@ -229,16 +188,16 @@ if ( 'failed' == $status ) {
 										}
 										?>
 									</td>
-									<td class="text-center"><?php echo $job->queue; ?></td>
+									<td class="text-center"><?php echo esc_html( $job->queue ); ?></td>
 									<td class="text-center">
 										<?php
 										if ( $job->attempts > 2 ) {
 											echo '<div class="actions">';
-											echo '<a href="#" id="" data-job-ID="' . $job->id . '" class="button btn-bw-retry-job">' . __( 'Retry Job' ) . '</a>';
+											echo '<a href="#" id="" data-job-ID="' . esc_attr( $job->id ) . '" class="button btn-bw-retry-job">' . esc_html__( 'Retry Job' ) . '</a>';
 											echo '<span class="spinner hide"></span>';
 											echo '</div>';
 										} else {
-											echo $job->attempts;
+											echo esc_html( $job->attempts );
 										}
 										?>
 									</td>
@@ -248,7 +207,7 @@ if ( 'failed' == $status ) {
 						} else {
 						?>
 							<tr>
-								<td colspan="6" class="text-center"><?php _e( 'No jobs' ); ?>.</td>
+								<td colspan="6" class="text-center"><?php esc_html_e( 'No jobs' ); ?>.</td>
 							</tr>
 							<?php
 						}
@@ -303,7 +262,7 @@ if ( 'failed' == $status ) {
 						foreach ( $filearray as $key => $value ) {
 							$content .= $value . "\n";
 						}
-						if ( $content == '' ) {
+						if ( '' === $content ) {
 							$content = __( 'Nothing to read, permission problem maybe?' );
 						}
 					} else {
@@ -311,7 +270,7 @@ if ( 'failed' == $status ) {
 					}
 				}
 				?>
-				<textarea class="log-text" rows="20"><?php echo $content; ?></textarea>
+				<textarea class="log-text" rows="20"><?php echo esc_textarea( $content ); ?></textarea>
 			</div>
 		</div>
 
@@ -325,10 +284,10 @@ function background_worker_admin_notices() {
 		return;
 	}
 
-	if ( isset( $_GET['action'] ) && wp_verify_nonce( $_GET['action'], 'clear_background_worker_jobs' ) ) {
-	?>
+	if ( isset( $_GET['action'] ) && wp_verify_nonce( sanitize_key( $_GET['action'] ), 'clear_background_worker_jobs' ) ) {
+		?>
 		<div class="notice notice-success is-dismissible">
-			<p><?php _e( 'All jobs have been cleared.' ); ?></p>
+			<p><?php esc_html_e( 'All jobs have been cleared.' ); ?></p>
 		</div>
 		<?php
 	}
@@ -344,7 +303,7 @@ function retry_background_worker_job_ajax_callback() {
 
 	$dataForm = $_POST['dataForm'];
 	$_POST    = $dataForm;
-	$job_id   = $_POST['id'];
+	$job_id   = isset( $_POST['id'] ) ? absint( $_POST['id'] ) : 0;
 
 	$update = $wpdb->update(
 		$table_name,
