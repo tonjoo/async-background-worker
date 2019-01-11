@@ -3,7 +3,7 @@
 add_action( 'admin_enqueue_scripts', 'wp_background_worker_admin_scripts' );
 function wp_background_worker_admin_scripts() {
 	wp_enqueue_style( 'bg-worker-admin-style', ABW_PLUGIN_DIR . 'css/admin.css', array(), false );
-	wp_enqueue_script( 'bg-worker-admin-js', ABW_PLUGIN_DIR . 'js/admin.js' , array( 'jquery' ), '', true );
+	wp_enqueue_script( 'bg-worker-admin-js', ABW_PLUGIN_DIR . 'js/admin.js', array( 'jquery' ), '', true );
 }
 
 add_action( 'admin_menu', 'background_worker_menu_page' );
@@ -14,26 +14,27 @@ function background_worker_menu_page() {
 function background_worker_page_handler() {
 	global $wpdb, $pagenow;
 
-	$table_name     = $wpdb->prefix . ABW_DB_NAME;
+	$table_name = $wpdb->prefix . ABW_DB_NAME;
 
-	$page           = isset( $_GET['page'] ) ? $_GET['page'] : ABW_ADMIN_MENU_SLUG;
-	$page_uri       = add_query_arg(
+	$page        = isset( $_GET['page'] ) ? $_GET['page'] : ABW_ADMIN_MENU_SLUG;
+	$page_uri    = add_query_arg(
 		array(
 			'page' => $page,
-		), trailingslashit( admin_url() ) . $pagenow
+		),
+		trailingslashit( admin_url() ) . $pagenow
 	);
-	$current_url    = get_current_url();
-	$nonce          = wp_create_nonce( 'clear_background_worker_jobs' );
-	$paged          = isset( $_GET['paged'] ) ? intval( $_GET['paged'] ) : 1;
-	$status         = isset( $_GET['status'] ) ? $_GET['status'] : '';
-	$per_page       = 20;
-	$offset         = ($per_page * $paged) - $per_page;
+	$current_url = get_current_url();
+	$nonce       = wp_create_nonce( 'clear_background_worker_jobs' );
+	$paged       = isset( $_GET['paged'] ) ? intval( $_GET['paged'] ) : 1;
+	$status      = isset( $_GET['status'] ) ? $_GET['status'] : '';
+	$per_page    = 20;
+	$offset      = ( $per_page * $paged ) - $per_page;
 
-	$sql                = "SELECT * FROM $table_name ORDER BY id, created_datetime, attempts ASC";
-	$total_active_jobs  = $wpdb->get_var( "SELECT COUNT(*) FROM $table_name WHERE attempts < 3" );
-	$total_failed_jobs  = $wpdb->get_var( "SELECT COUNT(*) FROM $table_name WHERE attempts > 2" );
-	$total_jobs         = $wpdb->get_var( "SELECT COUNT(*) FROM ($sql) AS derived_table" );
-	$max_pages          = max( 1, ceil( $total_jobs / $per_page ) );
+	$sql               = "SELECT * FROM $table_name ORDER BY id, created_datetime, attempts ASC";
+	$total_active_jobs = $wpdb->get_var( "SELECT COUNT(*) FROM $table_name WHERE attempts < 3" );
+	$total_failed_jobs = $wpdb->get_var( "SELECT COUNT(*) FROM $table_name WHERE attempts > 2" );
+	$total_jobs        = $wpdb->get_var( "SELECT COUNT(*) FROM ($sql) AS derived_table" );
+	$max_pages         = max( 1, ceil( $total_jobs / $per_page ) );
 
 	if ( '' != $status ) {
 		if ( 'active' == $status ) {
@@ -43,11 +44,12 @@ function background_worker_page_handler() {
 				WHERE 
 					attempts < %d 
 				ORDER BY id, created_datetime, attempts ASC
-				", array( 3 )
+				",
+				array( 3 )
 			);
 
-			$total_active_jobs  = $wpdb->get_var( "SELECT COUNT(*) FROM ($sql) AS derived_table" );
-			$max_pages          = max( 1, ceil( $total_active_jobs / $per_page ) );
+			$total_active_jobs = $wpdb->get_var( "SELECT COUNT(*) FROM ($sql) AS derived_table" );
+			$max_pages         = max( 1, ceil( $total_active_jobs / $per_page ) );
 		} else {
 			$sql = $wpdb->prepare(
 				"
@@ -55,11 +57,12 @@ function background_worker_page_handler() {
 				WHERE 
 					attempts > %d 
 				ORDER BY id, created_datetime, attempts DESC
-				", array( 2 )
+				",
+				array( 2 )
 			);
 
-			$total_failed_jobs  = $wpdb->get_var( "SELECT COUNT(*) FROM ($sql) AS derived_table" );
-			$max_pages          = max( 1, ceil( $total_failed_jobs / $per_page ) );
+			$total_failed_jobs = $wpdb->get_var( "SELECT COUNT(*) FROM ($sql) AS derived_table" );
+			$max_pages         = max( 1, ceil( $total_failed_jobs / $per_page ) );
 		}
 	}
 
@@ -112,7 +115,8 @@ function background_worker_page_handler() {
 							echo add_query_arg(
 								array(
 									'status' => 'active',
-								),$page_uri
+								),
+								$page_uri
 							);
 ?>
 " class="
@@ -126,7 +130,8 @@ if ( 'active' == $status ) {
 							echo add_query_arg(
 								array(
 									'status' => 'failed',
-								),$page_uri
+								),
+								$page_uri
 							);
 ?>
 " class="
@@ -145,7 +150,8 @@ if ( 'failed' == $status ) {
 							echo add_query_arg(
 								array(
 									'action' => $nonce,
-								),$page_uri
+								),
+								$page_uri
 							);
 ?>
 " onClick="if ( !confirm('Are you sure?') ) return false;"><?php _e( 'Clear All Jobs' ); ?></a>
@@ -171,7 +177,7 @@ if ( 'failed' == $status ) {
 						<?php
 						if ( $jobs ) {
 							$number = $offset;
-							$i = 0;
+							$i      = 0;
 							foreach ( $jobs as $key => $job ) {
 								$i++;
 								$number++;
@@ -187,40 +193,40 @@ if ( 'failed' == $status ) {
 										<?php
 											$function = $payload->function;
 
-											if ( is_array( $function ) ) {
+										if ( is_array( $function ) ) {
 
-												if ( is_object( $function[0] ) ) {
-													$class  = get_class( $function[0] );
-													$access = '->';
-												} else {
-													$class  = $function[0];
-													$access = '::';
-												}
-
-												echo $class . $access . $function[1] . '()';
+											if ( is_object( $function[0] ) ) {
+												$class  = get_class( $function[0] );
+												$access = '->';
 											} else {
-												echo $function . '()';
+												$class  = $function[0];
+												$access = '::';
 											}
+
+											echo $class . $access . $function[1] . '()';
+										} else {
+											echo $function . '()';
+										}
 										?>
 									</td>
 									<td class="arguments">
-										<?php 
+										<?php
 											$args = $payload->user_data;
 
-											if ( empty( $args ) ) {
-												echo '<em>' . esc_html__( 'None' ) . '</em>';
-											} else {
-												$json_options = 0;
+										if ( empty( $args ) ) {
+											echo '<em>' . esc_html__( 'None' ) . '</em>';
+										} else {
+											$json_options = 0;
 
-												if ( defined( 'JSON_UNESCAPED_SLASHES' ) ) {
-													$json_options |= JSON_UNESCAPED_SLASHES;
-												}
-												if ( defined( 'JSON_PRETTY_PRINT' ) ) {
-													$json_options |= JSON_PRETTY_PRINT;
-												}
-
-												echo "<pre>" . wp_json_encode( $args, $json_options ) . "</pre>";
+											if ( defined( 'JSON_UNESCAPED_SLASHES' ) ) {
+												$json_options |= JSON_UNESCAPED_SLASHES;
 											}
+											if ( defined( 'JSON_PRETTY_PRINT' ) ) {
+												$json_options |= JSON_PRETTY_PRINT;
+											}
+
+											echo '<pre>' . wp_json_encode( $args, $json_options ) . '</pre>';
+										}
 										?>
 									</td>
 									<td class="text-center"><?php echo $job->queue; ?></td>
@@ -228,7 +234,7 @@ if ( 'failed' == $status ) {
 										<?php
 										if ( $job->attempts > 2 ) {
 											echo '<div class="actions">';
-											echo '<a href="#" id="" data-job-ID="' . $job->id . '" class="button btn-bw-retry-job">'.__( 'Retry Job' ).'</a>';
+											echo '<a href="#" id="" data-job-ID="' . $job->id . '" class="button btn-bw-retry-job">' . __( 'Retry Job' ) . '</a>';
 											echo '<span class="spinner hide"></span>';
 											echo '</div>';
 										} else {
@@ -239,7 +245,8 @@ if ( 'failed' == $status ) {
 								</tr>
 								<?php
 							}
-						} else { ?>
+						} else {
+						?>
 							<tr>
 								<td colspan="6" class="text-center"><?php _e( 'No jobs' ); ?>.</td>
 							</tr>
@@ -278,13 +285,13 @@ if ( 'failed' == $status ) {
 					global $wp_filesystem;
 
 					if ( empty( $wp_filesystem ) ) {
-						require_once( ABSPATH . '/wp-admin/includes/file.php' );
+						require_once ABSPATH . '/wp-admin/includes/file.php';
 						WP_Filesystem();
 					}
 
 					$filearray = $wp_filesystem->get_contents( BACKGROUND_WORKER_LOG );
 
-					$filearray = explode( "\n",$filearray );
+					$filearray = explode( "\n", $filearray );
 
 					$filearray = array_slice( $filearray, -100 );
 
@@ -333,11 +340,11 @@ function retry_background_worker_job_ajax_callback() {
 
 	$table_name = $wpdb->prefix . ABW_DB_NAME;
 
-	$response   = [];
+	$response = [];
 
-	$dataForm   = $_POST['dataForm'];
-	$_POST      = $dataForm;
-	$job_id     = $_POST['id'];
+	$dataForm = $_POST['dataForm'];
+	$_POST    = $dataForm;
+	$job_id   = $_POST['id'];
 
 	$update = $wpdb->update(
 		$table_name,
