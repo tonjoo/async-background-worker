@@ -93,10 +93,13 @@ Skip table locking when checkin for new job.
 
 ### Queue and log setting
 ```
+
 define( 'ABW_DEBUG' , false );
 define( 'ABW_QUEUE_NAME', 'WP_QUEUE' );
 // Sleep between each background worker call, default value is 0.75 second
 define( 'ABW_SLEEP', 750000 );
+// sleep if no job available
+define('ABW_NO_JOB_PERIOD', 60);
 define( 'BACKGROUND_WORKER_LOG', '/path/to/supervisord/worker.log' );
 // Timeout for worker execution, best to not set time to unlimited
 define( 'ABW_TIMELIMIT', 60 );
