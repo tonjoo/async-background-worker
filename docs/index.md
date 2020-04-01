@@ -79,7 +79,7 @@ Skip table locking when checkin for new job.
     stdout_logfile=/path/to/wordpress/logs/supervisord.log
     redirect_stderr=true
     # If you have non root user which share www-data group you can disable --allow-root and put the user here 
-    user=[your-user-name]
+    user=www-data
     autostart=true
     autorestart=true
     ```
