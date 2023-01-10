@@ -318,7 +318,7 @@ class Async_Background_Worker {
 		}
 
 		// Assume that each proccess take 50 M
-		if ( ( memory_get_usage() / 1024 / 1024) - 50 >= WP_MEMORY_LIMIT ) { 
+		if ( ( memory_get_usage() / 1024 / 1024) - 50 >= (int) WP_MEMORY_LIMIT ) { 
 			WP_CLI::log( 'Memory limit execeed' );
 			exit();
 		}
